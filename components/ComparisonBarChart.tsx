@@ -1,6 +1,6 @@
 import React from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
-import Svg, { Rect } from 'react-native-svg';
+import Svg, { Line, Rect } from 'react-native-svg';
 import { theme } from '../constants/theme';
 
 interface ComparisonBarData {
@@ -25,10 +25,30 @@ export const ComparisonBarChart: React.FC<ComparisonBarChartProps> = ({ data, he
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             <Svg width={chartWidth} height={height}>
+                {/* Y Axis */}
+                <Line
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2={height}
+                    stroke={theme.colors.border}
+                    strokeWidth="1"
+                />
+                {/* X Axis */}
+                <Line
+                    x1="0"
+                    y1={height}
+                    x2={chartWidth}
+                    y2={height}
+                    stroke={theme.colors.border}
+                    strokeWidth="2"
+                />
                 {data.map((item, index) => {
                     const incomeHeight = (item.income / maxVal) * (height - 24);
                     const expenseHeight = (item.expense / maxVal) * (height - 24);
-                    const xStart = index * groupWidth + (groupWidth - (barWidth * 2 + gap)) / 2;
+                    // Add a small padding from Y axis
+                    const xOffset = 16;
+                    const xStart = xOffset + index * ((chartWidth - xOffset) / data.length) + (((chartWidth - xOffset) / data.length) - (barWidth * 2 + gap)) / 2;
 
                     return (
                         <React.Fragment key={item.label}>

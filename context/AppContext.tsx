@@ -13,6 +13,8 @@ interface AppContextType {
     addExpense: (categoryId: string, amount: number, name: string, description?: string) => Promise<void>;
     updateCategories: (updatedCategories: Category[]) => Promise<void>;
     deleteCategory: (id: string) => Promise<void>;
+    deleteTransaction: (id: string) => Promise<void>;
+    clearTransactions: () => Promise<void>;
     getCategoryBalance: (id: string) => number;
     refreshData: () => Promise<void>;
 }
@@ -177,6 +179,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await refreshData();
     };
 
+    const deleteTransaction = async (id: string) => {
+        if (!db) return;
+        await db.runAsync('DELETE FROM transactions WHERE id = ?', [id]);
+        await refreshData();
+    };
+
+    const clearTransactions = async () => {
+        if (!db) return;
+        await db.runAsync('DELETE FROM transactions');
+        await refreshData();
+    };
+
     const getCategoryBalance = (id: string) => {
         const catTransactions = transactions.filter(t => t.category_id === id);
         return catTransactions.reduce((acc, t) => {
@@ -194,6 +208,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             addExpense,
             updateCategories,
             deleteCategory,
+            deleteTransaction,
+            clearTransactions,
             getCategoryBalance,
             refreshData
         }}>

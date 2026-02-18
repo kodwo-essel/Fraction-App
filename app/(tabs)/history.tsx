@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EntryTransition } from '../../components/EntryTransition';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
@@ -8,8 +8,23 @@ import { theme } from '../../constants/theme';
 import { useApp } from '../../context/AppContext';
 
 export default function History() {
-    const { transactions, categories, isLoading } = useApp();
+    const { transactions, categories, isLoading, deleteTransaction } = useApp();
     const insets = useSafeAreaInsets();
+
+    const handleDelete = (id: string) => {
+        Alert.alert(
+            'Delete Entry',
+            'Are you sure you want to delete this record?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: () => deleteTransaction(id)
+                }
+            ]
+        );
+    };
 
     if (isLoading) {
         return (
@@ -44,12 +59,14 @@ export default function History() {
                 renderItem={({ item, index }) => (
                     <EntryTransition delay={index * 50}>
                         <TransactionItem
+                            id={item.id}
                             type={item.type}
                             amount={item.amount}
                             categoryName={getCategoryName(item.category_id)}
                             name={item.name}
                             description={item.description}
                             date={item.created_at}
+                            onDelete={handleDelete}
                         />
                     </EntryTransition>
                 )}

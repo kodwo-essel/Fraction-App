@@ -1,27 +1,30 @@
-import { TrendingDown, TrendingUp } from 'lucide-react-native';
+import { Trash2, TrendingDown, TrendingUp } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { theme } from '../constants/theme';
 import { formatCurrency } from '../services/allocation';
+import { PressableScale } from './PressableScale';
 
 interface TransactionItemProps {
+    id: string;
     type: 'income' | 'expense';
     amount: number;
     categoryName: string;
     name: string;
     description?: string;
     date: string;
-    onPress?: () => void;
+    onDelete?: (id: string) => void;
 }
 
 export const TransactionItem: React.FC<TransactionItemProps> = ({
+    id,
     type,
     amount,
     categoryName,
     name,
     description,
     date,
-    onPress
+    onDelete
 }) => {
     const isIncome = type === 'income';
 
@@ -40,16 +43,28 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
                         <Text style={[styles.name, { color: theme.colors.text }]}>{name}</Text>
                         <Text style={[styles.category, { color: theme.colors.textSecondary }]}>{categoryName}</Text>
                     </View>
-                    <Text style={[
-                        styles.amount,
-                        { color: theme.colors.text },
-                        !isIncome && [styles.amountExpense, { color: theme.colors.textSecondary }]
-                    ]}>
-                        {isIncome ? '+' : '-'}{formatCurrency(amount)}
-                    </Text>
+                    <View style={styles.rightContent}>
+                        <Text style={[
+                            styles.amount,
+                            { color: theme.colors.text },
+                            !isIncome && [styles.amountExpense, { color: theme.colors.textSecondary }]
+                        ]}>
+                            {isIncome ? '+' : '-'}{formatCurrency(amount)}
+                        </Text>
+                        {onDelete && (
+                            <PressableScale
+                                style={styles.deleteButton}
+                                onPress={() => onDelete(id)}
+                            >
+                                <Trash2 size={16} color={theme.colors.gray.medium} />
+                            </PressableScale>
+                        )}
+                    </View>
                 </View>
                 {description ? <Text style={[styles.description, { color: theme.colors.textSecondary }]}>{description}</Text> : null}
-                <Text style={[styles.date, { color: theme.colors.textSecondary }]}>{new Date(date).toLocaleDateString()} • {new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+                <Text style={[styles.date, { color: theme.colors.textSecondary }]}>
+                    {new Date(date).toLocaleDateString()} • {new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
             </View>
         </View>
     );
@@ -98,6 +113,14 @@ const styles = StyleSheet.create({
     },
     amountExpense: {
         fontWeight: theme.typography.weight.regular as any,
+    },
+    rightContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    deleteButton: {
+        marginLeft: theme.spacing.md,
+        padding: theme.spacing.xs,
     },
     description: {
         fontSize: theme.typography.size.sm,

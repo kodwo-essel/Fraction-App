@@ -1,3 +1,4 @@
+import { Category } from '@/services/database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -9,10 +10,9 @@ import { EntryTransition } from '../../components/EntryTransition';
 import { PressableScale } from '../../components/PressableScale';
 import { theme } from '../../constants/theme';
 import { useApp } from '../../context/AppContext';
-import { Category } from '@/services/database';
 
 export default function Settings() {
-    const { categories, isLoading, deleteCategory, updateCategories } = useApp();
+    const { categories, isLoading, deleteCategory, updateCategories, clearTransactions } = useApp();
     const [localCategories, setLocalCategories] = useState<Category[]>([]);
     const [isModified, setIsModified] = useState(false);
     const insets = useSafeAreaInsets();
@@ -52,6 +52,24 @@ export default function Settings() {
             setBiometrics(false);
             await AsyncStorage.setItem('biometric_enabled', 'false');
         }
+    };
+
+    const handleClearData = () => {
+        Alert.alert(
+            'Clear All Data',
+            'Are you sure you want to delete ALL transaction history? This cannot be undone.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Clear All',
+                    style: 'destructive',
+                    onPress: async () => {
+                        await clearTransactions();
+                        Alert.alert('Success', 'All transaction history has been cleared.');
+                    }
+                }
+            ]
+        );
     };
 
     useEffect(() => {
@@ -279,6 +297,21 @@ export default function Settings() {
                         </PressableScale>
                     </View>
                 )}
+
+                <Text style={styles.sectionHeader}>Data Management</Text>
+                <View style={[styles.sectionCard, { borderColor: '#FF000033' }]}>
+                    <PressableScale onPress={handleClearData}>
+                        <View style={styles.settingItem}>
+                            <View style={styles.settingLeft}>
+                                <View style={[styles.iconBox, { backgroundColor: '#FF000011' }]}>
+                                    <Trash2 size={18} color="#FF0000" />
+                                </View>
+                                <Text style={[styles.settingLabel, { color: '#FF0000' }]}>Clear All History</Text>
+                            </View>
+                            <ChevronRight size={18} color={theme.colors.gray.medium} />
+                        </View>
+                    </PressableScale>
+                </View>
 
                 <Text style={styles.sectionHeader}>About</Text>
                 <View style={styles.sectionCard}>
