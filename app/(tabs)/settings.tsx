@@ -12,7 +12,38 @@ import { theme } from '../../constants/theme';
 import { useApp } from '../../context/AppContext';
 
 export default function Settings() {
-    const { categories, isLoading, deleteCategory, updateCategories, clearTransactions } = useApp();
+    const { categories, isLoading, deleteCategory, updateCategories, clearTransactions, resetDatabase } = useApp();
+    // ...
+    const handleResetApp = () => {
+        Alert.alert(
+            'Factory Reset',
+            'This will delete EVERYTHING: all transactions, custom categories, and rules. The app will return to its initial state. Are you absolutely sure?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Reset Everything',
+                    style: 'destructive',
+                    onPress: () => {
+                        Alert.alert(
+                            'Final Warning',
+                            'This action is irreversible. All your financial records will be lost forever.',
+                            [
+                                { text: 'Back', style: 'cancel' },
+                                {
+                                    text: 'I Understand, Reset',
+                                    style: 'destructive',
+                                    onPress: async () => {
+                                        await resetDatabase();
+                                        Alert.alert('App Reset', 'The application has been restored to factory settings.');
+                                    }
+                                }
+                            ]
+                        );
+                    }
+                }
+            ]
+        );
+    };
     const [localCategories, setLocalCategories] = useState<Category[]>([]);
     const [isModified, setIsModified] = useState(false);
     const insets = useSafeAreaInsets();
@@ -307,6 +338,18 @@ export default function Settings() {
                                     <Trash2 size={18} color="#FF0000" />
                                 </View>
                                 <Text style={[styles.settingLabel, { color: '#FF0000' }]}>Clear All History</Text>
+                            </View>
+                            <ChevronRight size={18} color={theme.colors.gray.medium} />
+                        </View>
+                    </PressableScale>
+                    <View style={styles.itemSeparator} />
+                    <PressableScale onPress={handleResetApp}>
+                        <View style={styles.settingItem}>
+                            <View style={styles.settingLeft}>
+                                <View style={[styles.iconBox, { backgroundColor: '#FF000011' }]}>
+                                    <Database size={18} color="#FF0000" />
+                                </View>
+                                <Text style={[styles.settingLabel, { color: '#FF0000' }]}>Factory Reset App</Text>
                             </View>
                             <ChevronRight size={18} color={theme.colors.gray.medium} />
                         </View>

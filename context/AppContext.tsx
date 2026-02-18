@@ -15,6 +15,7 @@ interface AppContextType {
     deleteCategory: (id: string) => Promise<void>;
     deleteTransaction: (id: string) => Promise<void>;
     clearTransactions: () => Promise<void>;
+    resetDatabase: () => Promise<void>;
     getCategoryBalance: (id: string) => number;
     refreshData: () => Promise<void>;
 }
@@ -191,6 +192,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await refreshData();
     };
 
+    const resetDatabase = async () => {
+        if (!db) return;
+
+        await db.withTransactionAsync(async () => {
+            await db.runAsync('DELETE FROM transactions');
+            await db.runAsync('DELETE FROM categories');
+            await db.runAsync('DELETE FROM rule_versions');
+
+            // Re-initialize defaults
+            const defaultRuleId = Crypto.randomUUID();
+            const defaultCats: Partial<Category>[] = [
+                { id: Crypto.randomUUID(), name: 'Tithes', percentage: 10, type: 'main', is_protected: true },
+                { id: Crypto.randomUUID(), name: 'Wealth', percentage: 30, type: 'main', is_protected: true },
+                { id: Crypto.randomUUID(), name: 'Core', percentage: 25, type: 'main', is_protected: false },
+                { id: Crypto.randomUUID(), name: 'Lifestyle', percentage: 20, type: 'main', is_protected: false },
+                { id: Crypto.randomUUID(), name: 'Personal', percentage: 15, type: 'main', is_protected: false },
+            ];
+
+            const wealthId = defaultCats.find(c => c.name === 'Wealth')?.id;
+            if (wealthId) {
+                defaultCats.push(
+                    { id: Crypto.randomUUID(), name: 'Emergency', percentage: 50, type: 'sub', parent_id: wealthId, is_protected: false },
+                    { id: Crypto.randomUUID(), name: 'Savings', percentage: 33.33, type: 'sub', parent_id: wealthId, is_protected: false },
+                    { id: Crypto.randomUUID(), name: 'Investment', percentage: 16.67, type: 'sub', parent_id: wealthId, is_protected: false },
+                );
+            }
+
+            for (const cat of defaultCats) {
+                await db.runAsync(
+                    'INSERT INTO categories (id, name, percentage, type, parent_id, is_protected) VALUES (?, ?, ?, ?, ?, ?)',
+                    [cat.id!, cat.name!, cat.percentage!, cat.type!, cat.parent_id || null, cat.is_protected ? 1 : 0]
+                );
+            }
+
+            await db.runAsync(
+                'INSERT INTO rule_versions (id, config_snapshot) VALUES (?, ?)',
+                [defaultRuleId, JSON.stringify(defaultCats)]
+            );
+        });
+
+        await refreshData();
+    };
+
     const getCategoryBalance = (id: string) => {
         const catTransactions = transactions.filter(t => t.category_id === id);
         return catTransactions.reduce((acc, t) => {
@@ -210,6 +254,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             deleteCategory,
             deleteTransaction,
             clearTransactions,
+            resetDatabase,
             getCategoryBalance,
             refreshData
         }}>
