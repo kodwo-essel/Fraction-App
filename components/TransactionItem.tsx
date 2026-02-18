@@ -13,7 +13,8 @@ interface TransactionItemProps {
     name: string;
     description?: string;
     date: string;
-    onDelete?: (id: string) => void;
+    onDelete?: (id: string, groupId?: string) => void;
+    groupId?: string;
 }
 
 export const TransactionItem: React.FC<TransactionItemProps> = ({
@@ -24,7 +25,8 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
     name,
     description,
     date,
-    onDelete
+    onDelete,
+    groupId
 }) => {
     const isIncome = type === 'income';
 
@@ -54,7 +56,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
                         {onDelete && (
                             <PressableScale
                                 style={styles.deleteButton}
-                                onPress={() => onDelete(id)}
+                                onPress={() => onDelete(id, groupId)}
                             >
                                 <Trash2 size={16} color={theme.colors.gray.medium} />
                             </PressableScale>

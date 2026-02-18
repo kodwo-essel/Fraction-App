@@ -11,20 +11,24 @@ export default function History() {
     const { transactions, categories, isLoading, deleteTransaction } = useApp();
     const insets = useSafeAreaInsets();
 
-    const handleDelete = (id: string) => {
-        Alert.alert(
-            'Delete Entry',
-            'Are you sure you want to delete this record?',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: () => deleteTransaction(id)
-                }
-            ]
+
+    const groupedTransactions = React.useMemo(() => {
+        const groups: Record<string, any> = {};
+
+        transactions.forEach(t => {
+            if (!groups[t.group_id]) {
+                groups[t.group_id] = {
+                    ...t,
+                    amount: t.total_amount || t.amount,
+                    isGroup: t.type === 'income' && transactions.filter(x => x.group_id === t.group_id).length > 1
+                };
+            }
+        });
+
+        return Object.values(groups).sort((a: any, b: any) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
-    };
+    }, [transactions]);
 
     if (isLoading) {
         return (
@@ -38,15 +42,31 @@ export default function History() {
         );
     }
 
-    const getCategoryName = (id: string) => {
-        return categories.find(c => c.id === id)?.name || 'Unknown';
+    const handleDelete = (id: string, groupId?: string) => {
+        Alert.alert(
+            'Delete Entry',
+            'Are you sure you want to delete this record?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: () => deleteTransaction(id, groupId)
+                }
+            ]
+        );
+    };
+
+    const getCategoryName = (item: any) => {
+        if (item.isGroup) return 'Allocation';
+        return categories.find(c => c.id === item.category_id)?.name || 'Unknown';
     };
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             <FlatList
-                data={transactions}
-                keyExtractor={item => item.id}
+                data={groupedTransactions}
+                keyExtractor={(item: any) => item.group_id}
                 contentContainerStyle={[
                     styles.content,
                     { paddingTop: insets.top + theme.spacing.md, paddingBottom: insets.bottom + 80 }
@@ -56,13 +76,14 @@ export default function History() {
                         <Text style={[styles.title, { color: theme.colors.textSecondary }]}>History</Text>
                     </EntryTransition>
                 }
-                renderItem={({ item, index }) => (
+                renderItem={({ item, index }: { item: any; index: number }) => (
                     <EntryTransition delay={index * 50}>
                         <TransactionItem
                             id={item.id}
+                            groupId={item.group_id}
                             type={item.type}
                             amount={item.amount}
-                            categoryName={getCategoryName(item.category_id)}
+                            categoryName={getCategoryName(item)}
                             name={item.name}
                             description={item.description}
                             date={item.created_at}

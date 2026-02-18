@@ -1,3 +1,4 @@
+import React from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BalanceCard } from '../../components/BalanceCard';
@@ -12,6 +13,16 @@ import { useApp } from '../../context/AppContext';
 export default function Dashboard() {
   const { categories, transactions, getCategoryBalance, isLoading } = useApp();
   const insets = useSafeAreaInsets();
+
+  const totalIncome = React.useMemo(() => {
+    const uniqueGroups = transactions
+      .filter(t => t.type === 'income')
+      .reduce((acc, t) => {
+        acc[t.group_id] = t.total_amount;
+        return acc;
+      }, {} as Record<string, number>);
+    return Object.values(uniqueGroups).reduce((acc, val) => acc + val, 0);
+  }, [transactions]);
 
   if (isLoading) {
     return (
@@ -34,21 +45,34 @@ export default function Dashboard() {
     );
   }
 
-  const totalBalance = transactions.reduce((acc, t) =>
-    t.type === 'income' ? acc + t.amount : acc - t.amount, 0
-  );
-  const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
-  const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+  const totalExpenses = transactions
+    .filter(t => t.type === 'expense')
+    .reduce((acc, t) => acc + t.amount, 0);
+
+  const totalBalance = totalIncome - totalExpenses;
 
   const mainCategories = categories.filter(c => c.type === 'main');
 
   // Data for Comparison Bar Chart (Income vs Expense)
   const comparisonData = mainCategories.map(c => {
+    // For Income, we sum up leaf nodes within this main category's branch
+    // Since we now only record leaf nodes, this filter is safe.
+    // To be super safe against old data, we sum amount only for leaf categories.
     const catIn = transactions
-      .filter(t => (t.category_id === c.id || categories.find(sub => sub.id === t.category_id)?.parent_id === c.id) && t.type === 'income')
+      .filter(t => {
+        const isSelf = t.category_id === c.id;
+        const isChild = categories.find(sub => sub.id === t.category_id)?.parent_id === c.id;
+        const hasChildren = categories.some(sub => sub.parent_id === t.category_id);
+        return t.type === 'income' && (isSelf || isChild) && !hasChildren;
+      })
       .reduce((acc, t) => acc + t.amount, 0);
+
     const catOut = transactions
-      .filter(t => (t.category_id === c.id || categories.find(sub => sub.id === t.category_id)?.parent_id === c.id) && t.type === 'expense')
+      .filter(t => {
+        const isSelf = t.category_id === c.id;
+        const isChild = categories.find(sub => sub.id === t.category_id)?.parent_id === c.id;
+        return t.type === 'expense' && (isSelf || isChild);
+      })
       .reduce((acc, t) => acc + t.amount, 0);
 
     return {

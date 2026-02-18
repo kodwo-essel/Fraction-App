@@ -13,7 +13,7 @@ interface AppContextType {
     addExpense: (categoryId: string, amount: number, name: string, description?: string) => Promise<void>;
     updateCategories: (updatedCategories: Category[]) => Promise<void>;
     deleteCategory: (id: string) => Promise<void>;
-    deleteTransaction: (id: string) => Promise<void>;
+    deleteTransaction: (id: string, groupId?: string) => Promise<void>;
     clearTransactions: () => Promise<void>;
     resetDatabase: () => Promise<void>;
     getCategoryBalance: (id: string) => number;
@@ -102,14 +102,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!db || !currentRule) return;
         const allocation = calculateAllocation(amount, categories);
         const ruleSnapshot = currentRule.config_snapshot;
+        const groupId = Crypto.randomUUID();
 
-        // We need to flatten the allocation and save each part
         const saveAllocations = async (items: any[]) => {
             for (const item of items) {
-                await db.runAsync(
-                    'INSERT INTO transactions (id, type, amount, category_id, name, description, rule_snapshot) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                    [Crypto.randomUUID(), 'income', item.amount, item.categoryId, name, description || null, ruleSnapshot]
-                );
+                // Only record in DB if it's a leaf node (no sub-allocations)
+                // OR if it's a main category without children
+                if (!item.subAllocations || item.subAllocations.length === 0) {
+                    await db.runAsync(
+                        'INSERT INTO transactions (id, type, amount, category_id, name, description, rule_snapshot, group_id, total_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                        [Crypto.randomUUID(), 'income', item.amount, item.categoryId, name, description || null, ruleSnapshot, groupId, amount]
+                    );
+                }
+
                 if (item.subAllocations) {
                     await saveAllocations(item.subAllocations);
                 }
@@ -122,9 +127,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const addExpense = async (categoryId: string, amount: number, name: string, description?: string) => {
         if (!db || !currentRule) return;
+        const id = Crypto.randomUUID();
         await db.runAsync(
-            'INSERT INTO transactions (id, type, amount, category_id, name, description, rule_snapshot) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [Crypto.randomUUID(), 'expense', amount, categoryId, name, description || null, currentRule.config_snapshot]
+            'INSERT INTO transactions (id, type, amount, category_id, name, description, rule_snapshot, group_id, total_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [id, 'expense', amount, categoryId, name, description || null, currentRule.config_snapshot, id, amount]
         );
         await refreshData();
     };
@@ -180,9 +186,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await refreshData();
     };
 
-    const deleteTransaction = async (id: string) => {
+    const deleteTransaction = async (id: string, groupId?: string) => {
         if (!db) return;
-        await db.runAsync('DELETE FROM transactions WHERE id = ?', [id]);
+        if (groupId) {
+            await db.runAsync('DELETE FROM transactions WHERE group_id = ?', [groupId]);
+        } else {
+            await db.runAsync('DELETE FROM transactions WHERE id = ?', [id]);
+        }
         await refreshData();
     };
 
@@ -236,7 +246,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const getCategoryBalance = (id: string) => {
-        const catTransactions = transactions.filter(t => t.category_id === id);
+        const subCategoryIds = categories.filter(c => c.parent_id === id).map(c => c.id);
+        const targetIds = [id, ...subCategoryIds];
+
+        // Note: For multi-level nesting we'd need recursion, but schema only supports one level of sub
+        const catTransactions = transactions.filter(t => targetIds.includes(t.category_id));
         return catTransactions.reduce((acc, t) => {
             return t.type === 'income' ? acc + t.amount : acc - t.amount;
         }, 0);

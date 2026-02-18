@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CategoryRow } from '../../components/CategoryRow';
 import { EntryTransition } from '../../components/EntryTransition';
 import { PressableScale } from '../../components/PressableScale';
+import { SkeletonLoader } from '../../components/SkeletonLoader';
 import { theme } from '../../constants/theme';
 import { useApp } from '../../context/AppContext';
 import { formatCurrency } from '../../services/allocation';
@@ -20,12 +21,27 @@ export default function Expense() {
 
     // Can only log expenses to non-protected categories
     // If a category has subcategories, must choose subcategory
-    const selectableCategories = categories.filter(c => {
-        if (c.is_protected) return false;
-        const hasSubs = categories.some(sub => sub.parent_id === c.id);
-        if (hasSubs && c.type === 'main') return false; // Must pick sub
-        return true;
-    });
+    const selectableCategories = React.useMemo(() => {
+        return categories.filter(c => {
+            if (c.is_protected) return false;
+            const hasSubs = categories.some(sub => sub.parent_id === c.id);
+            if (hasSubs && c.type === 'main') return false; // Must pick sub
+            return true;
+        });
+    }, [categories]);
+
+    if (isLoading) {
+        return (
+            <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+                <View style={[styles.content, { paddingTop: insets.top + theme.spacing.lg }]}>
+                    <SkeletonLoader height={24} width={120} style={{ marginBottom: 15 }} />
+                    <SkeletonLoader height={50} style={{ marginBottom: 25 }} />
+                    <SkeletonLoader height={24} width={120} style={{ marginBottom: 15 }} />
+                    <SkeletonLoader height={200} style={{ marginBottom: 25 }} />
+                </View>
+            </View>
+        );
+    }
 
     const handleSave = async () => {
         if (expenseAmount <= 0) {

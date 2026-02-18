@@ -22,6 +22,8 @@ export interface Transaction {
   description?: string;
   created_at: string;
   rule_snapshot: string;
+  group_id: string;
+  total_amount: number;
 }
 
 export interface RuleVersion {
@@ -34,70 +36,126 @@ let isInitializing = false;
 let dbInstance: SQLite.SQLiteDatabase | null = null;
 
 export const initDatabase = async () => {
-  if (dbInstance) return dbInstance;
   if (isInitializing) {
-    // Wait until initialization is complete
     while (isInitializing) {
       await new Promise(resolve => setTimeout(resolve, 50));
     }
-    return dbInstance!;
   }
+  if (dbInstance) return dbInstance;
 
   isInitializing = true;
   try {
     const db = await SQLite.openDatabaseAsync(DB_NAME);
-    dbInstance = db;
 
-    // Perform all schema operations in one go
-    await db.execAsync(`
-      PRAGMA foreign_keys = ON;
-      CREATE TABLE IF NOT EXISTS categories (
-        id TEXT PRIMARY KEY NOT NULL,
-        name TEXT NOT NULL,
-        percentage REAL NOT NULL,
-        type TEXT CHECK(type IN ('main', 'sub')) NOT NULL,
-        parent_id TEXT,
-        is_protected INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (parent_id) REFERENCES categories (id) ON DELETE CASCADE
-      );
-      CREATE TABLE IF NOT EXISTS transactions (
-        id TEXT PRIMARY KEY NOT NULL,
-        type TEXT CHECK(type IN ('income', 'expense')) NOT NULL,
-        amount REAL NOT NULL,
-        category_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        description TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        rule_snapshot TEXT NOT NULL,
-        FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE CASCADE
-      );
-      CREATE TABLE IF NOT EXISTS rule_versions (
-        id TEXT PRIMARY KEY NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        config_snapshot TEXT NOT NULL
-      );
-    `);
-
-    // Migration: Check if name column exists, if not add it
-    // We use a separate check to avoid ALTER TABLE errors if already exists
-    const tableInfo = await db.getAllAsync<{ name: string }>('PRAGMA table_info(transactions);');
-    const hasName = tableInfo.some(col => col.name === 'name');
-
-    if (!hasName) {
-      // Use withTransactionAsync for migration safety
-      await db.withTransactionAsync(async () => {
-        // Need to check again inside transaction just in case
-        const innerInfo = await db.getAllAsync<{ name: string }>('PRAGMA table_info(transactions);');
-        if (!innerInfo.some(col => col.name === 'name')) {
-          await db.execAsync("ALTER TABLE transactions ADD COLUMN name TEXT DEFAULT 'Transaction';");
-          await db.execAsync('ALTER TABLE transactions ADD COLUMN description TEXT;');
-        }
-      });
+    // 1. Enable Foreign Keys
+    try {
+      await db.execAsync('PRAGMA foreign_keys = ON;');
+    } catch (e) {
+      console.error('Error enabling foreign keys:', e);
+      throw e;
     }
 
+    // 2. Create Categories Table
+    try {
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS categories (
+          id TEXT PRIMARY KEY NOT NULL,
+          name TEXT NOT NULL,
+          percentage REAL NOT NULL,
+          type TEXT CHECK(type IN ('main', 'sub')) NOT NULL,
+          parent_id TEXT,
+          is_protected INTEGER DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (parent_id) REFERENCES categories (id) ON DELETE CASCADE
+        );
+      `);
+    } catch (e) {
+      console.error('Error creating categories table:', e);
+      throw e;
+    }
+
+    // 3. Create Transactions Table
+    try {
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS transactions (
+          id TEXT PRIMARY KEY NOT NULL,
+          type TEXT CHECK(type IN ('income', 'expense')) NOT NULL,
+          amount REAL NOT NULL,
+          category_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          description TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          rule_snapshot TEXT NOT NULL,
+          group_id TEXT,
+          total_amount REAL,
+          FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE CASCADE
+        );
+      `);
+    } catch (e) {
+      console.error('Error creating transactions table:', e);
+      throw e;
+    }
+
+    // 4. Create Rule Versions Table
+    try {
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS rule_versions (
+          id TEXT PRIMARY KEY NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          config_snapshot TEXT NOT NULL
+        );
+      `);
+    } catch (e) {
+      console.error('Error creating rule_versions table:', e);
+      throw e;
+    }
+
+    // 5. Migration: name and description columns
+    try {
+      const columns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(transactions);');
+      if (!columns.some(col => col.name === 'name')) {
+        await db.execAsync("ALTER TABLE transactions ADD COLUMN name TEXT DEFAULT 'Transaction';");
+      }
+      if (!columns.some(col => col.name === 'description')) {
+        await db.execAsync('ALTER TABLE transactions ADD COLUMN description TEXT;');
+      }
+    } catch (e) {
+      console.error('Error migrating name/description columns:', e);
+      throw e;
+    }
+
+    // 6. Migration: group_id column
+    try {
+      const columns2 = await db.getAllAsync<{ name: string }>('PRAGMA table_info(transactions);');
+      if (!columns2.some(col => col.name === 'group_id')) {
+        await db.execAsync('ALTER TABLE transactions ADD COLUMN group_id TEXT;');
+        await db.runAsync('UPDATE transactions SET group_id = id WHERE group_id IS NULL');
+      }
+    } catch (e) {
+      console.error('Error migrating group_id column:', e);
+      throw e;
+    }
+
+    // 7. Migration: total_amount column
+    try {
+      const columns3 = await db.getAllAsync<{ name: string }>('PRAGMA table_info(transactions);');
+      if (!columns3.some(col => col.name === 'total_amount')) {
+        await db.execAsync('ALTER TABLE transactions ADD COLUMN total_amount REAL;');
+        // Backfill total_amount with current amount
+        await db.runAsync('UPDATE transactions SET total_amount = amount WHERE total_amount IS NULL');
+      }
+    } catch (e) {
+      console.error('Error migrating total_amount column:', e);
+      throw e;
+    }
+
+    dbInstance = db;
     return db;
+  } catch (e) {
+    console.error('Database initialization failed:', e);
+    dbInstance = null; // Ensure dbInstance is null if initialization fails
+    throw e; // Re-throw the error to indicate failure
   } finally {
     isInitializing = false;
   }

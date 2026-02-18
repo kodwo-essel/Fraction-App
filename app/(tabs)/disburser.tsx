@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CategoryRow } from '../../components/CategoryRow';
 import { EntryTransition } from '../../components/EntryTransition';
 import { PressableScale } from '../../components/PressableScale';
+import { SkeletonLoader } from '../../components/SkeletonLoader';
 import { theme } from '../../constants/theme';
 import { useApp } from '../../context/AppContext';
 import { calculateAllocation, formatCurrency } from '../../services/allocation';
@@ -13,11 +14,26 @@ export default function Disburser() {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [step, setStep] = useState<'input' | 'preview'>('input');
-    const { categories, addIncome } = useApp();
+    const { categories, addIncome, isLoading } = useApp();
     const insets = useSafeAreaInsets();
 
     const incomeAmount = parseFloat(amount) || 0;
-    const allocation = calculateAllocation(incomeAmount, categories);
+    const allocation = React.useMemo(() => calculateAllocation(incomeAmount, categories), [incomeAmount, categories]);
+
+    if (isLoading) {
+        return (
+            <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+                <View style={[styles.content, { paddingTop: insets.top + theme.spacing.lg }]}>
+                    <SkeletonLoader height={24} width={120} style={{ marginBottom: 15 }} />
+                    <SkeletonLoader height={50} style={{ marginBottom: 25 }} />
+                    <SkeletonLoader height={24} width={120} style={{ marginBottom: 15 }} />
+                    <SkeletonLoader height={50} style={{ marginBottom: 25 }} />
+                    <SkeletonLoader height={24} width={120} style={{ marginBottom: 15 }} />
+                    <SkeletonLoader height={70} style={{ marginBottom: 25 }} />
+                </View>
+            </View>
+        );
+    }
 
     const handleNext = () => {
         if (incomeAmount <= 0) {
