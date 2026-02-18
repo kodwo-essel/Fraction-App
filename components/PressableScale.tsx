@@ -11,6 +11,8 @@ import { theme } from '../constants/theme';
 interface PressableScaleProps extends PressableProps {
     style?: StyleProp<ViewStyle>;
     children: React.ReactNode;
+    onPress?: () => void;
+    disabled?: boolean;
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -39,8 +41,13 @@ export const PressableScale: React.FC<PressableScaleProps> = ({
 
     const handlePressIn = (event: any) => {
         scale.value = withSpring(0.97, { damping: 10, stiffness: 200 });
-        // If it's a black button, flash to a dark gray, otherwise use the default pressed color
-        const pressedColor = baseColor === theme.colors.black ? theme.colors.gray.dark : theme.colors.pressed;
+        // Use theme.colors.pressed by default. 
+        // If it's a primary button (text color in B&W theme), flash to a slightly different gray
+        let pressedColor = theme.colors.pressed;
+        if (baseColor === theme.colors.text) {
+            pressedColor = theme.colors.gray.dark;
+        }
+
         backgroundColor.value = withTiming(pressedColor, { duration: 100 });
         onPressIn?.(event);
     };

@@ -1,5 +1,7 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
-import { ChevronRight, Database, Info, Layout, Lock, Moon, Plus, Save, Trash2 } from 'lucide-react-native';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { ChevronRight, Database, Info, Lock, Plus, Save, Trash2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,25 +9,56 @@ import { EntryTransition } from '../../components/EntryTransition';
 import { PressableScale } from '../../components/PressableScale';
 import { theme } from '../../constants/theme';
 import { useApp } from '../../context/AppContext';
-import { Category } from '../../services/database';
+import { Category } from '@/services/database';
 
 export default function Settings() {
-    const { categories, updateCategories, deleteCategory, isLoading } = useApp();
+    const { categories, isLoading, deleteCategory, updateCategories } = useApp();
     const [localCategories, setLocalCategories] = useState<Category[]>([]);
     const [isModified, setIsModified] = useState(false);
     const insets = useSafeAreaInsets();
 
     // Toggles state
-    const [darkMode, setDarkMode] = useState(false);
     const [biometrics, setBiometrics] = useState(false);
     const [showRulesEditor, setShowRulesEditor] = useState(false);
+
+    useEffect(() => {
+        loadSettings();
+    }, []);
+
+    const loadSettings = async () => {
+        const biom = await AsyncStorage.getItem('biometric_enabled');
+        setBiometrics(biom === 'true');
+    };
+
+    const toggleBiometrics = async (value: boolean) => {
+        if (value) {
+            const hasHardware = await LocalAuthentication.hasHardwareAsync();
+            const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+
+            if (!hasHardware || !isEnrolled) {
+                Alert.alert('Not Available', 'Biometric authentication is not set up on this device.');
+                return;
+            }
+
+            const result = await LocalAuthentication.authenticateAsync({
+                promptMessage: 'Enable Biometric Lock',
+            });
+
+            if (result.success) {
+                setBiometrics(true);
+                await AsyncStorage.setItem('biometric_enabled', 'true');
+            }
+        } else {
+            setBiometrics(false);
+            await AsyncStorage.setItem('biometric_enabled', 'false');
+        }
+    };
 
     useEffect(() => {
         if (categories.length > 0) {
             setLocalCategories(JSON.parse(JSON.stringify(categories)));
         }
     }, [categories]);
-
 
     const calculateTotal = (parentId: string | null) => {
         return localCategories
@@ -114,7 +147,7 @@ export default function Settings() {
         <View style={styles.settingItem}>
             <View style={styles.settingLeft}>
                 <View style={styles.iconBox}>
-                    <Icon size={18} color={theme.colors.black} />
+                    <Icon size={18} color={theme.colors.text} />
                 </View>
                 <Text style={styles.settingLabel}>{label}</Text>
             </View>
@@ -122,7 +155,7 @@ export default function Settings() {
                 <Switch
                     value={value}
                     onValueChange={onToggle}
-                    trackColor={{ false: theme.colors.border, true: theme.colors.black }}
+                    trackColor={{ false: theme.colors.border, true: theme.colors.text }}
                     thumbColor={theme.colors.white}
                 />
             ) : (
@@ -143,30 +176,13 @@ export default function Settings() {
                     <Text style={styles.title}>Settings</Text>
                 </EntryTransition>
 
-                <Text style={styles.sectionHeader}>Appearance</Text>
-                <View style={styles.sectionCard}>
-                    <SettingItem
-                        icon={Moon}
-                        label="Dark Mode"
-                        value={darkMode}
-                        onToggle={() => setDarkMode(!darkMode)}
-                    />
-                    <View style={styles.itemSeparator} />
-                    <SettingItem
-                        icon={Layout}
-                        label="Minimalist View"
-                        value={true}
-                        onToggle={() => { }}
-                    />
-                </View>
-
                 <Text style={styles.sectionHeader}>Security</Text>
                 <View style={styles.sectionCard}>
                     <SettingItem
                         icon={Lock}
                         label="Biometric Lock"
                         value={biometrics}
-                        onToggle={() => setBiometrics(!biometrics)}
+                        onToggle={toggleBiometrics}
                     />
                 </View>
 
@@ -194,18 +210,18 @@ export default function Settings() {
                             <View key={cat.id} style={styles.categoryBlock}>
                                 <View style={styles.catRow}>
                                     <TextInput
-                                        style={styles.nameInput}
+                                        style={[styles.nameInput, { color: theme.colors.text, borderBottomColor: theme.colors.border }]}
                                         value={cat.name}
                                         onChangeText={(val) => handleUpdateName(cat.id, val)}
                                     />
                                     <View style={styles.percentageWrapper}>
                                         <TextInput
-                                            style={styles.percentageInput}
+                                            style={[styles.percentageInput, { color: theme.colors.text }]}
                                             value={cat.percentage.toString()}
                                             onChangeText={(val) => handleUpdatePercentage(cat.id, val)}
                                             keyboardType="numeric"
                                         />
-                                        <Text>%</Text>
+                                        <Text style={{ color: theme.colors.text }}>%</Text>
                                     </View>
                                     <PressableScale onPress={() => handleDelete(cat.id)} style={styles.deleteBtn}>
                                         <Trash2 size={18} color={theme.colors.gray.medium} />
@@ -214,16 +230,16 @@ export default function Settings() {
 
                                 <View style={styles.optionsRow}>
                                     <View style={styles.option}>
-                                        <Text style={styles.optionLabel}>Protected (Income Only)</Text>
+                                        <Text style={[styles.optionLabel, { color: theme.colors.textSecondary }]}>Protected (Income Only)</Text>
                                         <Switch
                                             value={!!cat.is_protected}
                                             onValueChange={() => handleToggleProtected(cat.id)}
-                                            trackColor={{ false: theme.colors.border, true: theme.colors.black }}
+                                            trackColor={{ false: theme.colors.border, true: theme.colors.text }}
                                         />
                                     </View>
-                                    <PressableScale style={styles.addSubBtn} onPress={() => handleAddCategory(cat.id)}>
-                                        <Plus size={14} color={theme.colors.black} />
-                                        <Text style={styles.addSubText}>Add Subcategory</Text>
+                                    <PressableScale style={[styles.addSubBtn, { backgroundColor: theme.colors.gray.light }]} onPress={() => handleAddCategory(cat.id)}>
+                                        <Plus size={14} color={theme.colors.text} />
+                                        <Text style={[styles.addSubText, { color: theme.colors.text }]}>Add Subcategory</Text>
                                     </PressableScale>
                                 </View>
 
@@ -237,12 +253,12 @@ export default function Settings() {
                                         />
                                         <View style={styles.percentageWrapper}>
                                             <TextInput
-                                                style={styles.percentageInput}
+                                                style={[styles.percentageInput, { color: theme.colors.text }]}
                                                 value={sub.percentage.toString()}
                                                 onChangeText={(val) => handleUpdatePercentage(sub.id, val)}
                                                 keyboardType="numeric"
                                             />
-                                            <Text>%</Text>
+                                            <Text style={{ color: theme.colors.text }}>%</Text>
                                         </View>
                                         <PressableScale onPress={() => handleDelete(sub.id)} style={styles.deleteBtn}>
                                             <Trash2 size={16} color={theme.colors.gray.medium} />
@@ -257,9 +273,9 @@ export default function Settings() {
                             </View>
                         ))}
 
-                        <PressableScale style={styles.addMainBtn} onPress={() => handleAddCategory(null)}>
-                            <Plus size={20} color={theme.colors.black} />
-                            <Text style={styles.addMainText}>Add Main Category</Text>
+                        <PressableScale style={[styles.addMainBtn, { borderColor: theme.colors.text }]} onPress={() => handleAddCategory(null)}>
+                            <Plus size={20} color={theme.colors.text} />
+                            <Text style={[styles.addMainText, { color: theme.colors.text }]}>Add Main Category</Text>
                         </PressableScale>
                     </View>
                 )}
@@ -275,9 +291,9 @@ export default function Settings() {
 
             {isModified && (
                 <View style={[styles.footer, { bottom: insets.bottom + 50, paddingBottom: insets.bottom > 0 ? insets.bottom : theme.spacing.lg }]}>
-                    <PressableScale style={styles.saveBtn} onPress={handleSave}>
-                        <Save size={20} color={theme.colors.white} />
-                        <Text style={styles.saveBtnText}>Save Rules</Text>
+                    <PressableScale style={[styles.saveBtn, { backgroundColor: theme.colors.text }]} onPress={handleSave}>
+                        <Save size={20} color={theme.colors.background} />
+                        <Text style={[styles.saveBtnText, { color: theme.colors.background }]}>Save Rules</Text>
                     </PressableScale>
                 </View>
             )}
@@ -295,10 +311,11 @@ const styles = StyleSheet.create({
         paddingBottom: 100,
     },
     title: {
-        fontSize: theme.typography.size.xxl,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text,
-        marginBottom: theme.spacing.lg,
+        fontSize: theme.typography.size.sm,
+        color: theme.colors.textSecondary,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        marginBottom: theme.spacing.sm,
     },
     sectionHeader: {
         fontSize: theme.typography.size.xs,
@@ -310,9 +327,7 @@ const styles = StyleSheet.create({
         marginTop: theme.spacing.xl,
     },
     sectionCard: {
-        backgroundColor: theme.colors.white,
         borderWidth: 1,
-        borderColor: theme.colors.border,
         borderRadius: theme.roundness.md,
         overflow: 'hidden',
     },
@@ -374,7 +389,6 @@ const styles = StyleSheet.create({
         borderRadius: theme.roundness.md,
         padding: theme.spacing.md,
         marginBottom: theme.spacing.md,
-        backgroundColor: theme.colors.white,
     },
     catRow: {
         flexDirection: 'row',
@@ -491,7 +505,6 @@ const styles = StyleSheet.create({
         borderRadius: theme.roundness.md,
     },
     saveBtnText: {
-        color: theme.colors.white,
         fontWeight: theme.typography.weight.bold as any,
         marginLeft: theme.spacing.sm,
     },

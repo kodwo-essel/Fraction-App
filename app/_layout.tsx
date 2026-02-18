@@ -9,7 +9,85 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { theme } from '../constants/theme';
 import { AppProvider } from '../context/AppContext';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { useState } from 'react';
+import { LockScreen } from '../components/LockScreen';
+
 SplashScreen.preventAutoHideAsync();
+
+function RootLayoutContent() {
+  const [isLocked, setIsLocked] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    checkLock();
+  }, []);
+
+  const checkLock = async () => {
+    try {
+      const enabled = await AsyncStorage.getItem('biometric_enabled');
+      if (enabled === 'true') {
+        setIsLocked(true);
+        authenticate();
+      } else {
+        setIsLocked(false);
+      }
+    } catch (e) {
+      setIsLocked(false);
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  const authenticate = async () => {
+    const hasHardware = await LocalAuthentication.hasHardwareAsync();
+    const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+
+    if (hasHardware && isEnrolled) {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Unlock Fraction',
+      });
+      if (result.success) {
+        setIsLocked(false);
+      }
+    } else {
+      // If hardware is not available or not enrolled but it was somehow enabled, 
+      // we might want to allow access or ask for a fallback (which we haven't implemented)
+      // For now, let's just allow access to not lock the user out permanently
+      setIsLocked(false);
+    }
+  };
+
+  if (isChecking) return null;
+
+  if (isLocked) {
+    return <LockScreen onAuthenticate={authenticate} />;
+  }
+
+  return (
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <Stack
+        screenOptions={{
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+          },
+          headerTintColor: theme.colors.text,
+          headerTitleStyle: {
+            fontWeight: theme.typography.weight.bold as any,
+          },
+          contentStyle: {
+            backgroundColor: theme.colors.background,
+          },
+        }}
+      >
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      </Stack>
+      <StatusBar style="dark" />
+    </View>
+  );
+}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -30,26 +108,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AppProvider>
-          <View style={styles.container}>
-            <Stack
-              screenOptions={{
-                headerShown: true,
-                headerStyle: {
-                  backgroundColor: theme.colors.background,
-                },
-                headerTintColor: theme.colors.text,
-                headerTitleStyle: {
-                  fontWeight: theme.typography.weight.bold as any,
-                },
-                contentStyle: {
-                  backgroundColor: theme.colors.background,
-                },
-              }}
-            >
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            </Stack>
-            <StatusBar style="dark" />
-          </View>
+          <RootLayoutContent />
         </AppProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
@@ -59,6 +118,5 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
 });

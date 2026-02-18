@@ -54,89 +54,96 @@ export default function Expense() {
     };
 
     return (
-        <ScrollView
-            style={styles.container}
-            contentContainerStyle={[
-                styles.content,
-                { paddingTop: insets.top + theme.spacing.lg, paddingBottom: insets.bottom + 100 }
-            ]}
-        >
-            <EntryTransition delay={100}>
-                <Text style={styles.label}>Expense Name</Text>
-                <TextInput
-                    style={styles.nameInput}
-                    placeholder="e.g. Grocery"
-                    placeholderTextColor={theme.colors.gray.medium}
-                    value={name}
-                    onChangeText={setName}
-                />
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+            <ScrollView
+                contentContainerStyle={[
+                    styles.content,
+                    { paddingTop: insets.top + theme.spacing.lg, paddingBottom: insets.bottom + 100 }
+                ]}
+            >
+                <EntryTransition delay={100}>
+                    <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Expense Name</Text>
+                    <TextInput
+                        style={[styles.nameInput, { color: theme.colors.text, borderBottomColor: theme.colors.border }]}
+                        placeholder="e.g. Grocery"
+                        placeholderTextColor={theme.colors.gray.medium}
+                        value={name}
+                        onChangeText={setName}
+                    />
 
-                <Text style={styles.label}>Description (Optional)</Text>
-                <TextInput
-                    style={styles.descInput}
-                    placeholder="Add details..."
-                    placeholderTextColor={theme.colors.gray.medium}
-                    value={description}
-                    onChangeText={setDescription}
-                    multiline
-                />
+                    <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Description (Optional)</Text>
+                    <TextInput
+                        style={[styles.descInput, { color: theme.colors.text, borderBottomColor: theme.colors.border }]}
+                        placeholder="Add details..."
+                        placeholderTextColor={theme.colors.gray.medium}
+                        value={description}
+                        onChangeText={setDescription}
+                        multiline
+                    />
 
-                <Text style={styles.label}>Expense Amount</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="0.00"
-                    placeholderTextColor={theme.colors.gray.medium}
-                    keyboardType="numeric"
-                    value={amount}
-                    onChangeText={setAmount}
-                />
-            </EntryTransition>
+                    <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Expense Amount</Text>
+                    <TextInput
+                        style={[styles.input, { color: theme.colors.text, borderBottomColor: theme.colors.text }]}
+                        placeholder="0.00"
+                        placeholderTextColor={theme.colors.gray.medium}
+                        keyboardType="numeric"
+                        value={amount}
+                        onChangeText={setAmount}
+                    />
+                </EntryTransition>
 
-            <EntryTransition delay={200}>
-                <Text style={styles.sectionTitle}>Select Category</Text>
-                <View style={styles.listContainer}>
-                    {selectableCategories.map(cat => (
-                        <CategoryRow
-                            key={cat.id}
-                            name={cat.name}
-                            percentage={cat.percentage}
-                            level={cat.type === 'sub' ? 1 : 0}
-                            onPress={() => setSelectedId(cat.id)}
-                            rightElement={
-                                <View style={styles.right}>
-                                    <Text style={styles.balance}>{formatCurrency(getCategoryBalance(cat.id))}</Text>
-                                    <View style={[styles.radio, selectedId === cat.id && styles.radioSelected]} />
-                                </View>
-                            }
-                        />
-                    ))}
-                </View>
-            </EntryTransition>
+                <EntryTransition delay={200}>
+                    <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Select Category</Text>
+                    <View style={[styles.listContainer, { borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}>
+                        {selectableCategories.map(cat => (
+                            <CategoryRow
+                                key={cat.id}
+                                name={cat.name}
+                                percentage={cat.percentage}
+                                level={cat.type === 'sub' ? 1 : 0}
+                                onPress={() => setSelectedId(cat.id)}
+                                rightElement={
+                                    <View style={styles.right}>
+                                        <Text style={[styles.balance, { color: theme.colors.textSecondary }]}>{formatCurrency(getCategoryBalance(cat.id))}</Text>
+                                        <View style={[
+                                            styles.radio,
+                                            { borderColor: theme.colors.text },
+                                            selectedId === cat.id && [styles.radioSelected, { backgroundColor: theme.colors.text }]
+                                        ]} />
+                                    </View>
+                                }
+                            />
+                        ))}
+                    </View>
+                </EntryTransition>
 
-            <EntryTransition delay={300}>
-                <PressableScale
-                    style={[styles.button, (!selectedId || expenseAmount <= 0) ? styles.buttonDisabled : undefined]}
-                    onPress={handleSave}
-                    disabled={!selectedId || expenseAmount <= 0}
-                >
-                    <Text style={styles.buttonText}>Save Expense</Text>
-                </PressableScale>
-            </EntryTransition>
-        </ScrollView>
+                <EntryTransition delay={300}>
+                    <PressableScale
+                        style={[
+                            styles.button,
+                            { backgroundColor: theme.colors.text },
+                            (!selectedId || expenseAmount <= 0) ? [styles.buttonDisabled, { backgroundColor: theme.colors.gray.medium }] : undefined
+                        ]}
+                        onPress={handleSave}
+                        disabled={!selectedId || expenseAmount <= 0}
+                    >
+                        <Text style={[styles.buttonText, { color: theme.colors.background }]}>Save Expense</Text>
+                    </PressableScale>
+                </EntryTransition>
+            </ScrollView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.background,
     },
     content: {
         padding: theme.spacing.lg,
     },
     label: {
         fontSize: theme.typography.size.sm,
-        color: theme.colors.textSecondary,
         textTransform: 'uppercase',
         letterSpacing: 1,
         marginBottom: theme.spacing.sm,
@@ -144,17 +151,13 @@ const styles = StyleSheet.create({
     nameInput: {
         fontSize: theme.typography.size.lg,
         fontWeight: theme.typography.weight.medium as any,
-        color: theme.colors.text,
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border,
         paddingBottom: theme.spacing.xs,
         marginBottom: theme.spacing.lg,
     },
     descInput: {
         fontSize: theme.typography.size.sm,
-        color: theme.colors.text,
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border,
         paddingBottom: theme.spacing.xs,
         marginBottom: theme.spacing.lg,
         minHeight: 40,
@@ -162,23 +165,19 @@ const styles = StyleSheet.create({
     input: {
         fontSize: 48,
         fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text,
         borderBottomWidth: 2,
-        borderBottomColor: theme.colors.black,
         paddingBottom: theme.spacing.sm,
         marginBottom: theme.spacing.xl,
     },
     sectionTitle: {
         fontSize: theme.typography.size.sm,
         fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text,
         textTransform: 'uppercase',
         letterSpacing: 1.5,
         marginBottom: theme.spacing.md,
     },
     listContainer: {
         borderWidth: 1,
-        borderColor: theme.colors.border,
         borderRadius: theme.roundness.md,
         overflow: 'hidden',
         marginBottom: theme.spacing.xxl,
@@ -189,7 +188,6 @@ const styles = StyleSheet.create({
     },
     balance: {
         fontSize: theme.typography.size.xs,
-        color: theme.colors.textSecondary,
         marginRight: theme.spacing.sm,
     },
     radio: {
@@ -197,22 +195,17 @@ const styles = StyleSheet.create({
         height: 18,
         borderRadius: 9,
         borderWidth: 2,
-        borderColor: theme.colors.black,
     },
     radioSelected: {
-        backgroundColor: theme.colors.black,
     },
     button: {
-        backgroundColor: theme.colors.black,
         padding: theme.spacing.lg,
         alignItems: 'center',
         borderRadius: theme.roundness.md,
     },
     buttonDisabled: {
-        backgroundColor: theme.colors.gray.medium,
     },
     buttonText: {
-        color: theme.colors.white,
         fontSize: theme.typography.size.md,
         fontWeight: theme.typography.weight.bold as any,
     },

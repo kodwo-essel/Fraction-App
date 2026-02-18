@@ -26,10 +26,10 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
     const isIncome = type === 'income';
 
     return (
-        <View style={styles.container}>
-            <View style={styles.iconContainer}>
+        <View style={[styles.container, { borderBottomColor: theme.colors.border }]}>
+            <View style={[styles.iconContainer, { backgroundColor: theme.colors.gray.light }]}>
                 {isIncome ? (
-                    <TrendingUp size={20} color={theme.colors.black} />
+                    <TrendingUp size={20} color={theme.colors.text} />
                 ) : (
                     <TrendingDown size={20} color={theme.colors.gray.medium} />
                 )}
@@ -37,15 +37,19 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
             <View style={styles.content}>
                 <View style={styles.header}>
                     <View style={styles.mainInfo}>
-                        <Text style={styles.name}>{name}</Text>
-                        <Text style={styles.category}>{categoryName}</Text>
+                        <Text style={[styles.name, { color: theme.colors.text }]}>{name}</Text>
+                        <Text style={[styles.category, { color: theme.colors.textSecondary }]}>{categoryName}</Text>
                     </View>
-                    <Text style={[styles.amount, !isIncome && styles.amountExpense]}>
+                    <Text style={[
+                        styles.amount,
+                        { color: theme.colors.text },
+                        !isIncome && [styles.amountExpense, { color: theme.colors.textSecondary }]
+                    ]}>
                         {isIncome ? '+' : '-'}{formatCurrency(amount)}
                     </Text>
                 </View>
-                {description ? <Text style={styles.description}>{description}</Text> : null}
-                <Text style={styles.date}>{new Date(date).toLocaleDateString()} • {new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+                {description ? <Text style={[styles.description, { color: theme.colors.textSecondary }]}>{description}</Text> : null}
+                <Text style={[styles.date, { color: theme.colors.textSecondary }]}>{new Date(date).toLocaleDateString()} • {new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
             </View>
         </View>
     );
@@ -57,13 +61,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: theme.spacing.md,
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border,
     },
     iconContainer: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: theme.colors.gray.light,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: theme.spacing.md,
@@ -83,32 +85,26 @@ const styles = StyleSheet.create({
     name: {
         fontSize: theme.typography.size.md,
         fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text,
     },
     category: {
         fontSize: theme.typography.size.xs,
-        color: theme.colors.textSecondary,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
     amount: {
         fontSize: theme.typography.size.md,
         fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text,
         marginLeft: theme.spacing.sm,
     },
     amountExpense: {
         fontWeight: theme.typography.weight.regular as any,
-        color: theme.colors.textSecondary,
     },
     description: {
         fontSize: theme.typography.size.sm,
-        color: theme.colors.textSecondary,
         marginTop: 2,
         marginBottom: 4,
     },
     date: {
         fontSize: theme.typography.size.xs,
-        color: theme.colors.textSecondary,
     },
 });

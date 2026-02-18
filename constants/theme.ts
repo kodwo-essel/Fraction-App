@@ -1,18 +1,14 @@
-export const theme = {
-    colors: {
-        background: '#FFFFFF',
-        text: '#000000',
-        textSecondary: '#666666',
-        border: '#E0E0E0',
-        pressed: '#F0F0F0',
-        white: '#FFFFFF',
-        black: '#000000',
-        gray: {
-            light: '#F5F5F5',
-            medium: '#999999',
-            dark: '#333333',
-        },
+const palette = {
+    white: '#FFFFFF',
+    black: '#000000',
+    gray: {
+        light: '#F5F5F5',
+        medium: '#999999',
+        dark: '#333333',
     },
+};
+
+const commonTokens = {
     spacing: {
         xs: 4,
         sm: 8,
@@ -43,4 +39,20 @@ export const theme = {
         lg: 12,
         full: 9999,
     },
-} as const;
+};
+
+export const theme = {
+    ...commonTokens,
+    colors: {
+        background: '#FFFFFF',
+        text: '#000000',
+        textSecondary: '#666666',
+        border: '#E0E0E0',
+        pressed: '#F0F0F0',
+        white: palette.white,
+        black: palette.black,
+        gray: palette.gray,
+    },
+};
+
+export type Theme = typeof theme;

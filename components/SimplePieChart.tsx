@@ -59,9 +59,9 @@ export const SimplePieChart: React.FC<SimplePieChartProps> = ({ data, size = 180
             <View style={styles.legend}>
                 {data.map((item) => (
                     <View key={item.label} style={styles.legendItem}>
-                        <View style={[styles.legendColor, { backgroundColor: item.color }]} />
-                        <Text style={styles.legendLabel}>{item.label}</Text>
-                        <Text style={styles.legendValue}>{((item.value / total) * 100).toFixed(0)}%</Text>
+                        <View style={[styles.legendColor, { backgroundColor: item.color, borderColor: theme.colors.border }]} />
+                        <Text style={[styles.legendLabel, { color: theme.colors.textSecondary }]}>{item.label}</Text>
+                        <Text style={[styles.legendValue, { color: theme.colors.text }]}>{((item.value / total) * 100).toFixed(0)}%</Text>
                     </View>
                 ))}
             </View>
@@ -78,11 +78,6 @@ const styles = StyleSheet.create({
         padding: theme.spacing.md,
     },
     chartWrapper: {
-        shadowColor: theme.colors.black,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-        elevation: 5,
     },
     legend: {
         gap: theme.spacing.xs,
@@ -97,16 +92,13 @@ const styles = StyleSheet.create({
         height: 10,
         borderRadius: 5,
         borderWidth: 1,
-        borderColor: theme.colors.border,
     },
     legendLabel: {
         fontSize: 12,
-        color: theme.colors.textSecondary,
         minWidth: 70,
     },
     legendValue: {
         fontSize: 12,
         fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text,
     },
 });

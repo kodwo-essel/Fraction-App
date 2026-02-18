@@ -45,115 +45,118 @@ export default function Disburser() {
     };
 
     return (
-        <ScrollView
-            style={styles.container}
-            contentContainerStyle={[
-                styles.content,
-                { paddingTop: insets.top + theme.spacing.lg, paddingBottom: insets.bottom + 100 }
-            ]}
-        >
-            <EntryTransition delay={100}>
-                <Text style={styles.label}>Allocation Name</Text>
-                <TextInput
-                    style={styles.nameInput}
-                    placeholder="e.g. Feb Salary"
-                    placeholderTextColor={theme.colors.gray.medium}
-                    value={name}
-                    onChangeText={setName}
-                    editable={step === 'input'}
-                />
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+            <ScrollView
+                contentContainerStyle={[
+                    styles.content,
+                    { paddingTop: insets.top + theme.spacing.lg, paddingBottom: insets.bottom + 100 }
+                ]}
+            >
+                <EntryTransition delay={100}>
+                    <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Allocation Name</Text>
+                    <TextInput
+                        style={[styles.nameInput, { color: theme.colors.text, borderBottomColor: theme.colors.border }]}
+                        placeholder="e.g. Feb Salary"
+                        placeholderTextColor={theme.colors.gray.medium}
+                        value={name}
+                        onChangeText={setName}
+                        editable={step === 'input'}
+                    />
 
-                <Text style={styles.label}>Description (Optional)</Text>
-                <TextInput
-                    style={styles.descInput}
-                    placeholder="Add details..."
-                    placeholderTextColor={theme.colors.gray.medium}
-                    value={description}
-                    onChangeText={setDescription}
-                    editable={step === 'input'}
-                    multiline
-                />
+                    <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Description (Optional)</Text>
+                    <TextInput
+                        style={[styles.descInput, { color: theme.colors.text, borderBottomColor: theme.colors.border }]}
+                        placeholder="Add details..."
+                        placeholderTextColor={theme.colors.gray.medium}
+                        value={description}
+                        onChangeText={setDescription}
+                        editable={step === 'input'}
+                        multiline
+                    />
 
-                <Text style={styles.label}>Income Amount</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="0.00"
-                    placeholderTextColor={theme.colors.gray.medium}
-                    keyboardType="numeric"
-                    value={amount}
-                    onChangeText={setAmount}
-                    editable={step === 'input'}
-                />
-            </EntryTransition>
+                    <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Income Amount</Text>
+                    <TextInput
+                        style={[styles.input, { color: theme.colors.text, borderBottomColor: theme.colors.text }]}
+                        placeholder="0.00"
+                        placeholderTextColor={theme.colors.gray.medium}
+                        keyboardType="numeric"
+                        value={amount}
+                        onChangeText={setAmount}
+                        editable={step === 'input'}
+                    />
+                </EntryTransition>
 
-            {step === 'preview' ? (
-                <EntryTransition delay={200}>
-                    <Text style={styles.sectionTitle}>Preview Allocation</Text>
-                    <View style={styles.previewCard}>
-                        {allocation.map(item => (
-                            <React.Fragment key={item.categoryId}>
-                                <CategoryRow
-                                    name={item.name}
-                                    percentage={item.percentage}
-                                    onPress={() => { }} // dummy to show it's clickable-ish or just styled
-                                    rightElement={<Text style={styles.amountText}>{formatCurrency(item.amount)}</Text>}
-                                />
-                                {item.subAllocations?.map(sub => (
+                {step === 'preview' ? (
+                    <EntryTransition delay={200}>
+                        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Preview Allocation</Text>
+                        <View style={[styles.previewCard, { borderColor: theme.colors.border }]}>
+                            {allocation.map(item => (
+                                <React.Fragment key={item.categoryId}>
                                     <CategoryRow
-                                        key={sub.categoryId}
-                                        name={sub.name}
-                                        percentage={sub.percentage}
-                                        level={1}
-                                        onPress={() => { }}
-                                        rightElement={<Text style={styles.subAmountText}>{formatCurrency(sub.amount)}</Text>}
+                                        name={item.name}
+                                        percentage={item.percentage}
+                                        onPress={() => { }} // dummy to show it's clickable-ish or just styled
+                                        rightElement={<Text style={[styles.amountText, { color: theme.colors.text }]}>{formatCurrency(item.amount)}</Text>}
                                     />
-                                ))}
-                            </React.Fragment>
-                        ))}
-                    </View>
+                                    {item.subAllocations?.map(sub => (
+                                        <CategoryRow
+                                            key={sub.categoryId}
+                                            name={sub.name}
+                                            percentage={sub.percentage}
+                                            level={1}
+                                            onPress={() => { }}
+                                            rightElement={<Text style={[styles.subAmountText, { color: theme.colors.textSecondary }]}>{formatCurrency(sub.amount)}</Text>}
+                                        />
+                                    ))}
+                                </React.Fragment>
+                            ))}
+                        </View>
 
-                    <PressableScale
-                        style={styles.button}
-                        onPress={handleConfirm}
-                    >
-                        <Text style={styles.buttonText}>Confirm & Save</Text>
-                    </PressableScale>
+                        <PressableScale
+                            style={[styles.button, { backgroundColor: theme.colors.text }]}
+                            onPress={handleConfirm}
+                        >
+                            <Text style={[styles.buttonText, { color: theme.colors.background }]}>Confirm & Save</Text>
+                        </PressableScale>
 
-                    <PressableScale
-                        style={styles.backButton}
-                        onPress={() => setStep('input')}
-                    >
-                        <Text style={styles.backButtonText}>Edit Amount</Text>
-                    </PressableScale>
-                </EntryTransition>
-            ) : null}
+                        <PressableScale
+                            style={styles.backButton}
+                            onPress={() => setStep('input')}
+                        >
+                            <Text style={[styles.backButtonText, { color: theme.colors.textSecondary }]}>Edit Amount</Text>
+                        </PressableScale>
+                    </EntryTransition>
+                ) : null}
 
-            {step === 'input' ? (
-                <EntryTransition delay={200}>
-                    <PressableScale
-                        style={[styles.button, incomeAmount <= 0 ? styles.buttonDisabled : undefined]}
-                        onPress={handleNext}
-                        disabled={incomeAmount <= 0}
-                    >
-                        <Text style={styles.buttonText}>Preview Allocation</Text>
-                    </PressableScale>
-                </EntryTransition>
-            ) : null}
-        </ScrollView>
+                {step === 'input' ? (
+                    <EntryTransition delay={200}>
+                        <PressableScale
+                            style={[
+                                styles.button,
+                                { backgroundColor: theme.colors.text },
+                                incomeAmount <= 0 ? [styles.buttonDisabled, { backgroundColor: theme.colors.gray.medium }] : undefined
+                            ]}
+                            onPress={handleNext}
+                            disabled={incomeAmount <= 0}
+                        >
+                            <Text style={[styles.buttonText, { color: theme.colors.background }]}>Preview Allocation</Text>
+                        </PressableScale>
+                    </EntryTransition>
+                ) : null}
+            </ScrollView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.background,
     },
     content: {
         padding: theme.spacing.lg,
     },
     label: {
         fontSize: theme.typography.size.sm,
-        color: theme.colors.textSecondary,
         textTransform: 'uppercase',
         letterSpacing: 1,
         marginBottom: theme.spacing.sm,
@@ -161,17 +164,13 @@ const styles = StyleSheet.create({
     nameInput: {
         fontSize: theme.typography.size.lg,
         fontWeight: theme.typography.weight.medium as any,
-        color: theme.colors.text,
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border,
         paddingBottom: theme.spacing.xs,
         marginBottom: theme.spacing.lg,
     },
     descInput: {
         fontSize: theme.typography.size.sm,
-        color: theme.colors.text,
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border,
         paddingBottom: theme.spacing.xs,
         marginBottom: theme.spacing.lg,
         minHeight: 40,
@@ -179,23 +178,19 @@ const styles = StyleSheet.create({
     input: {
         fontSize: 48,
         fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text,
         borderBottomWidth: 2,
-        borderBottomColor: theme.colors.black,
         paddingBottom: theme.spacing.sm,
         marginBottom: theme.spacing.xl,
     },
     sectionTitle: {
         fontSize: theme.typography.size.sm,
         fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text,
         textTransform: 'uppercase',
         letterSpacing: 1.5,
         marginBottom: theme.spacing.md,
     },
     previewCard: {
         borderWidth: 1,
-        borderColor: theme.colors.border,
         borderRadius: theme.roundness.md,
         overflow: 'hidden',
         marginBottom: theme.spacing.xxl,
@@ -206,19 +201,15 @@ const styles = StyleSheet.create({
     },
     subAmountText: {
         fontSize: theme.typography.size.sm,
-        color: theme.colors.textSecondary,
     },
     button: {
-        backgroundColor: theme.colors.black,
         padding: theme.spacing.lg,
         alignItems: 'center',
         borderRadius: theme.roundness.md,
     },
     buttonDisabled: {
-        backgroundColor: theme.colors.gray.medium,
     },
     buttonText: {
-        color: theme.colors.white,
         fontSize: theme.typography.size.md,
         fontWeight: theme.typography.weight.bold as any,
     },
@@ -228,7 +219,6 @@ const styles = StyleSheet.create({
         marginTop: theme.spacing.sm,
     },
     backButtonText: {
-        color: theme.colors.textSecondary,
         fontSize: theme.typography.size.sm,
     },
 });

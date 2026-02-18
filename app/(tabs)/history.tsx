@@ -13,7 +13,7 @@ export default function History() {
 
     if (isLoading) {
         return (
-            <View style={styles.container}>
+            <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
                 <View style={[styles.content, { paddingTop: insets.top + theme.spacing.md }]}>
                     {[1, 2, 3, 4, 5].map(i => (
                         <SkeletonLoader key={i} height={70} style={{ marginBottom: 15 }} borderRadius={theme.roundness.md} />
@@ -28,7 +28,7 @@ export default function History() {
     };
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             <FlatList
                 data={transactions}
                 keyExtractor={item => item.id}
@@ -38,7 +38,7 @@ export default function History() {
                 ]}
                 ListHeaderComponent={
                     <EntryTransition delay={0}>
-                        <Text style={styles.title}>History</Text>
+                        <Text style={[styles.title, { color: theme.colors.textSecondary }]}>History</Text>
                     </EntryTransition>
                 }
                 renderItem={({ item, index }) => (
@@ -55,7 +55,7 @@ export default function History() {
                 )}
                 ListEmptyComponent={
                     <View style={[styles.empty, { paddingTop: 100 + insets.top }]}>
-                        <Text style={styles.emptyText}>No history yet.</Text>
+                        <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>No history yet.</Text>
                     </View>
                 }
             />
@@ -66,7 +66,6 @@ export default function History() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.background,
     },
     content: {
         paddingHorizontal: theme.spacing.lg,
@@ -77,13 +76,12 @@ const styles = StyleSheet.create({
         paddingVertical: theme.spacing.xl,
     },
     title: {
-        fontSize: theme.typography.size.xxl,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text,
-        marginBottom: theme.spacing.lg,
+        fontSize: theme.typography.size.sm,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        marginBottom: theme.spacing.sm,
     },
     emptyText: {
-        color: theme.colors.textSecondary,
         fontSize: theme.typography.size.md,
     },
 });

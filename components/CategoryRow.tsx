@@ -25,17 +25,27 @@ export const CategoryRow: React.FC<CategoryRowProps> = ({
         <PressableScale
             onPress={onPress}
             disabled={!onPress}
-            style={[styles.container, level > 0 ? styles.containerSub : undefined]}
+            style={[
+                styles.container,
+                { borderBottomColor: theme.colors.border },
+                level > 0 ? [styles.containerSub, { backgroundColor: theme.colors.gray.light, borderBottomColor: theme.colors.background }] : undefined
+            ]}
         >
             <View style={styles.left}>
-                {level > 0 ? <View style={styles.indent} /> : null}
-                <Text style={[styles.name, level > 0 ? styles.nameSub : undefined]}>{name}</Text>
+                {level > 0 ? <View style={[styles.indent, { backgroundColor: theme.colors.border }]} /> : null}
+                <Text style={[
+                    styles.name,
+                    { color: theme.colors.text },
+                    level > 0 ? [styles.nameSub, { color: theme.colors.textSecondary }] : undefined
+                ]}>
+                    {name}
+                </Text>
                 {isProtected ? <Lock size={14} color={theme.colors.gray.medium} style={styles.icon} /> : null}
             </View>
             <View style={styles.right}>
                 {rightElement ? rightElement : (
                     <View style={styles.percentageContainer}>
-                        <Text style={styles.percentage}>{percentage}%</Text>
+                        <Text style={[styles.percentage, { color: theme.colors.textSecondary }]}>{percentage}%</Text>
                         {onPress ? <ChevronRight size={18} color={theme.colors.border} /> : null}
                     </View>
                 )}
@@ -52,11 +62,8 @@ const styles = StyleSheet.create({
         paddingVertical: theme.spacing.md,
         paddingHorizontal: theme.spacing.md,
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border,
     },
     containerSub: {
-        backgroundColor: theme.colors.gray.light,
-        borderBottomColor: theme.colors.white,
     },
     left: {
         flexDirection: 'row',
@@ -65,17 +72,14 @@ const styles = StyleSheet.create({
     indent: {
         width: 20,
         height: 1,
-        backgroundColor: theme.colors.border,
         marginRight: theme.spacing.sm,
     },
     name: {
         fontSize: theme.typography.size.md,
         fontWeight: theme.typography.weight.medium as any,
-        color: theme.colors.text,
     },
     nameSub: {
         fontSize: theme.typography.size.sm,
-        color: theme.colors.textSecondary,
     },
     icon: {
         marginLeft: theme.spacing.xs,
@@ -90,7 +94,6 @@ const styles = StyleSheet.create({
     },
     percentage: {
         fontSize: theme.typography.size.md,
-        color: theme.colors.textSecondary,
         marginRight: theme.spacing.xs,
     },
 });

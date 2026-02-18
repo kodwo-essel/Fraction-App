@@ -23,7 +23,7 @@ export const ComparisonBarChart: React.FC<ComparisonBarChartProps> = ({ data, he
     const maxVal = Math.max(...data.flatMap(d => [d.income, d.expense]), 1);
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             <Svg width={chartWidth} height={height}>
                 {data.map((item, index) => {
                     const incomeHeight = (item.income / maxVal) * (height - 24);
@@ -38,7 +38,7 @@ export const ComparisonBarChart: React.FC<ComparisonBarChartProps> = ({ data, he
                                 y={height - incomeHeight}
                                 width={barWidth}
                                 height={incomeHeight}
-                                fill={theme.colors.black}
+                                fill={theme.colors.text}
                                 rx={2}
                             />
                             {/* Expense Bar */}
@@ -56,19 +56,19 @@ export const ComparisonBarChart: React.FC<ComparisonBarChartProps> = ({ data, he
             </Svg>
             <View style={[styles.labels, { width: chartWidth }]}>
                 {data.map(item => (
-                    <Text key={item.label} style={[styles.labelText, { width: groupWidth }]}>
+                    <Text key={item.label} style={[styles.labelText, { width: groupWidth, color: theme.colors.textSecondary }]}>
                         {item.label}
                     </Text>
                 ))}
             </View>
             <View style={styles.legend}>
                 <View style={styles.legendItem}>
-                    <View style={[styles.legendColor, { backgroundColor: theme.colors.black }]} />
-                    <Text style={styles.legendText}>Income</Text>
+                    <View style={[styles.legendColor, { backgroundColor: theme.colors.text }]} />
+                    <Text style={[styles.legendText, { color: theme.colors.textSecondary }]}>Income</Text>
                 </View>
                 <View style={styles.legendItem}>
                     <View style={[styles.legendColor, { backgroundColor: theme.colors.gray.medium }]} />
-                    <Text style={styles.legendText}>Expense</Text>
+                    <Text style={[styles.legendText, { color: theme.colors.textSecondary }]}>Expense</Text>
                 </View>
             </View>
         </View>
@@ -78,7 +78,6 @@ export const ComparisonBarChart: React.FC<ComparisonBarChartProps> = ({ data, he
 const styles = StyleSheet.create({
     container: {
         padding: theme.spacing.md,
-        backgroundColor: theme.colors.background,
         alignItems: 'center',
     },
     labels: {
@@ -87,7 +86,6 @@ const styles = StyleSheet.create({
     },
     labelText: {
         fontSize: 10,
-        color: theme.colors.textSecondary,
         textAlign: 'center',
         textTransform: 'uppercase',
     },
@@ -108,6 +106,5 @@ const styles = StyleSheet.create({
     },
     legendText: {
         fontSize: 10,
-        color: theme.colors.textSecondary,
     },
 });
