@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import { theme } from '../constants/theme';
@@ -7,6 +8,7 @@ import { PressableScale } from './PressableScale';
 
 export const SetupScreen: React.FC = () => {
     const { userName, setUserName } = useApp();
+    const router = useRouter();
     const [name, setName] = useState('');
     const [isVisible, setIsVisible] = useState(false);
 
@@ -23,6 +25,7 @@ export const SetupScreen: React.FC = () => {
         if (name.trim()) {
             await setUserName(name.trim());
             setIsVisible(false);
+            router.replace('/(tabs)');
         }
     };
 

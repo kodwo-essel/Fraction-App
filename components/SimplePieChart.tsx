@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { G, Path } from 'react-native-svg';
@@ -18,6 +19,19 @@ export const SimplePieChart: React.FC<SimplePieChartProps> = ({ data, size = 180
     const total = data.reduce((acc, d) => acc + d.value, 0);
     const radius = size / 2;
     const center = radius;
+
+    // Show empty state when there's no data or total is 0
+    if (data.length === 0 || total === 0) {
+        return (
+            <View style={styles.emptyContainer}>
+                <Ionicons name="pie-chart-outline" size={48} color={theme.colors.gray.medium} />
+                <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No Rules Yet</Text>
+                <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
+                    Set up budget categories in Allocation to see your distribution here.
+                </Text>
+            </View>
+        );
+    }
 
     let currentAngle = 0;
 
@@ -61,7 +75,9 @@ export const SimplePieChart: React.FC<SimplePieChartProps> = ({ data, size = 180
                     <View key={item.label} style={styles.legendItem}>
                         <View style={[styles.legendColor, { backgroundColor: item.color, borderColor: theme.colors.border }]} />
                         <Text style={[styles.legendLabel, { color: theme.colors.textSecondary }]}>{item.label}</Text>
-                        <Text style={[styles.legendValue, { color: theme.colors.text }]}>{((item.value / total) * 100).toFixed(0)}%</Text>
+                        <Text style={[styles.legendValue, { color: theme.colors.text }]}>
+                            {total > 0 ? ((item.value / total) * 100).toFixed(0) : '0'}%
+                        </Text>
                     </View>
                 ))}
             </View>
@@ -101,4 +117,22 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: theme.typography.weight.bold as any,
     },
+    emptyContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: theme.spacing.xl,
+        gap: theme.spacing.sm,
+    },
+    emptyTitle: {
+        fontSize: theme.typography.size.md,
+        fontWeight: theme.typography.weight.bold as any,
+        marginTop: theme.spacing.xs,
+    },
+    emptySubtitle: {
+        fontSize: theme.typography.size.sm,
+        textAlign: 'center',
+        maxWidth: 260,
+        lineHeight: 20,
+    },
 });
+

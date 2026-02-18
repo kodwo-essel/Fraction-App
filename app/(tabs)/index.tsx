@@ -1,3 +1,5 @@
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -5,6 +7,7 @@ import { BalanceCard } from '../../components/BalanceCard';
 import { CategoryRow } from '../../components/CategoryRow';
 import { ComparisonBarChart } from '../../components/ComparisonBarChart';
 import { EntryTransition } from '../../components/EntryTransition';
+import { PressableScale } from '../../components/PressableScale';
 import { SimplePieChart } from '../../components/SimplePieChart';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
 import { theme } from '../../constants/theme';
@@ -13,6 +16,7 @@ import { useApp } from '../../context/AppContext';
 export default function Dashboard() {
   const { categories, transactions, getCategoryBalance, isLoading, userName } = useApp();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   const totalIncome = React.useMemo(() => {
     const uniqueGroups = transactions
@@ -52,6 +56,8 @@ export default function Dashboard() {
   const totalBalance = totalIncome - totalExpenses;
 
   const mainCategories = categories.filter(c => c.type === 'main');
+  // True only when there are user-defined (non-protected) main categories
+  const hasUserCategories = mainCategories.some(c => !c.is_protected);
 
   // Data for Comparison Bar Chart (Income vs Expense)
   const comparisonData = mainCategories.map(c => {
@@ -82,15 +88,17 @@ export default function Dashboard() {
     };
   });
 
-  // Data for Pie Chart (Current Rules)
-  const pieData = mainCategories.map((c, i) => {
-    const colors = [theme.colors.black, theme.colors.gray.dark, theme.colors.gray.medium, theme.colors.gray.light, theme.colors.border];
-    return {
-      label: c.name,
-      value: c.percentage,
-      color: colors[i % colors.length]
-    };
-  });
+  // Data for Pie Chart — only show when user has set up real categories
+  const pieData = hasUserCategories
+    ? mainCategories.map((c, i) => {
+      const colors = [theme.colors.black, theme.colors.gray.dark, theme.colors.gray.medium, theme.colors.gray.light, theme.colors.border];
+      return {
+        label: c.name,
+        value: c.percentage,
+        color: colors[i % colors.length]
+      };
+    })
+    : [];
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -147,17 +155,33 @@ export default function Dashboard() {
 
         <EntryTransition delay={600}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Categories</Text>
-          <View style={[styles.listContainer, { borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}>
-            {mainCategories.map((cat, index) => (
-              <CategoryRow
-                key={cat.id}
-                name={cat.name}
-                percentage={cat.percentage}
-                isProtected={cat.is_protected}
-                rightElement={<Text style={[styles.catBalance, { color: theme.colors.text }]}>${getCategoryBalance(cat.id).toFixed(0)}</Text>}
-              />
-            ))}
-          </View>
+          {!hasUserCategories ? (
+            <View style={styles.emptyCategories}>
+              <Ionicons name="albums-outline" size={40} color={theme.colors.gray.medium} />
+              <Text style={[styles.emptyCatTitle, { color: theme.colors.text }]}>No Categories Yet</Text>
+              <Text style={[styles.emptyCatSubtitle, { color: theme.colors.textSecondary }]}>
+                Set up budget rules to track where your money goes.
+              </Text>
+              <PressableScale
+                style={[styles.ctaButton, { backgroundColor: theme.colors.text }]}
+                onPress={() => router.push('/(tabs)/settings')}
+              >
+                <Text style={[styles.ctaButtonText, { color: theme.colors.background }]}>Set Up Categories</Text>
+              </PressableScale>
+            </View>
+          ) : (
+            <View style={[styles.listContainer, { borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}>
+              {mainCategories.map((cat) => (
+                <CategoryRow
+                  key={cat.id}
+                  name={cat.name}
+                  percentage={cat.percentage}
+                  isProtected={cat.is_protected}
+                  rightElement={<Text style={[styles.catBalance, { color: theme.colors.text }]}>${getCategoryBalance(cat.id).toFixed(0)}</Text>}
+                />
+              ))}
+            </View>
+          )}
         </EntryTransition>
       </ScrollView>
     </View>
@@ -229,5 +253,31 @@ const styles = StyleSheet.create({
   catBalance: {
     fontSize: theme.typography.size.md,
     fontWeight: theme.typography.weight.medium as any,
-  }
+  },
+  emptyCategories: {
+    alignItems: 'center',
+    paddingVertical: theme.spacing.xxl,
+    gap: theme.spacing.sm,
+  },
+  emptyCatTitle: {
+    fontSize: theme.typography.size.md,
+    fontWeight: theme.typography.weight.bold as any,
+    marginTop: theme.spacing.xs,
+  },
+  emptyCatSubtitle: {
+    fontSize: theme.typography.size.sm,
+    textAlign: 'center',
+    maxWidth: 240,
+    lineHeight: 20,
+  },
+  ctaButton: {
+    marginTop: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.roundness.md,
+  },
+  ctaButtonText: {
+    fontSize: theme.typography.size.sm,
+    fontWeight: theme.typography.weight.bold as any,
+  },
 });

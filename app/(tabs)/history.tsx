@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -93,7 +94,11 @@ export default function History() {
                 )}
                 ListEmptyComponent={
                     <View style={[styles.empty, { paddingTop: 100 + insets.top }]}>
-                        <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>No history yet.</Text>
+                        <Ionicons name="time-outline" size={56} color={theme.colors.gray.medium} />
+                        <Text style={[styles.emptyText, { color: theme.colors.text }]}>No history yet</Text>
+                        <Text style={[styles.emptySubtext, { color: theme.colors.textSecondary }]}>
+                            Your transactions will appear here once you start recording them.
+                        </Text>
                     </View>
                 }
             />
@@ -112,6 +117,7 @@ const styles = StyleSheet.create({
     empty: {
         alignItems: 'center',
         paddingVertical: theme.spacing.xl,
+        gap: theme.spacing.sm,
     },
     title: {
         fontSize: theme.typography.size.sm,
@@ -120,6 +126,14 @@ const styles = StyleSheet.create({
         marginBottom: theme.spacing.sm,
     },
     emptyText: {
-        fontSize: theme.typography.size.md,
+        fontSize: theme.typography.size.lg,
+        fontWeight: theme.typography.weight.bold as any,
+        marginTop: theme.spacing.md,
+    },
+    emptySubtext: {
+        fontSize: theme.typography.size.sm,
+        textAlign: 'center',
+        maxWidth: 260,
+        lineHeight: 20,
     },
 });
