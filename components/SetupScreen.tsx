@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import { theme } from '../constants/theme';
@@ -35,8 +36,9 @@ export const SetupScreen: React.FC = () => {
         <Modal
             visible={isVisible}
             animationType="fade"
-            transparent
+            statusBarTranslucent
         >
+            <StatusBar hidden />
             <View style={styles.overlay}>
                 <KeyboardAvoidingView
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
