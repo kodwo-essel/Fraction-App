@@ -163,8 +163,8 @@ export default function Settings() {
 
     const handleSave = async () => {
         const mainTotal = calculateTotal(null);
-        if (Math.abs(mainTotal - 100) > 0.01) {
-            Alert.alert('Invalid Percentages', `Main categories must sum to 100% (Current: ${mainTotal}%)`);
+        if (mainTotal > 100.01) {
+            Alert.alert('Invalid Percentages', `Main categories cannot exceed 100% (Current: ${mainTotal}%)`);
             return;
         }
 
@@ -173,8 +173,8 @@ export default function Settings() {
         );
         for (const main of mainsWithSubs) {
             const subTotal = calculateTotal(main.id);
-            if (Math.abs(subTotal - 100) > 0.01) {
-                Alert.alert('Invalid Sub-Percentages', `${main.name} subcategories must sum to 100% (Current: ${subTotal}%)`);
+            if (subTotal > 100.01) {
+                Alert.alert('Invalid Sub-Percentages', `${main.name} subcategories cannot exceed 100% (Current: ${subTotal}%)`);
                 return;
             }
         }
@@ -190,7 +190,7 @@ export default function Settings() {
 
     if (isLoading) return null;
 
-    const mainCategories = localCategories.filter(c => c.type === 'main');
+    const mainCategories = localCategories.filter(c => c.type === 'main' && c.id !== 'system_others');
 
     const SettingItem = ({ icon: Icon, label, value, onToggle, type = 'toggle' }: any) => (
         <View style={styles.settingItem}>
@@ -267,8 +267,15 @@ export default function Settings() {
                 {showRulesEditor && (
                     <View style={styles.rulesEditorContainer}>
                         <View style={styles.headerRow}>
-                            <Text style={styles.sectionTitle}>Main Categories</Text>
-                            <Text style={[styles.total, Math.abs(calculateTotal(null) - 100) > 0.01 ? styles.totalError : undefined]}>
+                            <View>
+                                <Text style={styles.sectionTitle}>Main Categories</Text>
+                                {calculateTotal(null) < 100 && (
+                                    <Text style={[styles.othersHint, { color: theme.colors.textSecondary }]}>
+                                        + {100 - calculateTotal(null)}% will be auto-allocated to "Others"
+                                    </Text>
+                                )}
+                            </View>
+                            <Text style={[styles.total, calculateTotal(null) > 100.01 ? styles.totalError : undefined]}>
                                 Total: {calculateTotal(null)}%
                             </Text>
                         </View>
@@ -333,17 +340,31 @@ export default function Settings() {
                                     </View>
                                 ))}
                                 {localCategories.some(s => s.parent_id === cat.id) && (
-                                    <Text style={[styles.subTotal, Math.abs(calculateTotal(cat.id) - 100) > 0.01 ? styles.totalError : undefined]}>
-                                        Sub-total: {calculateTotal(cat.id)}%
-                                    </Text>
+                                    <View style={styles.subTotalRow}>
+                                        {calculateTotal(cat.id) < 100 && (
+                                            <Text style={styles.subOthersHint}>+ {100 - calculateTotal(cat.id)}% to Others</Text>
+                                        )}
+                                        <Text style={[styles.subTotal, calculateTotal(cat.id) > 100.01 ? styles.totalError : undefined]}>
+                                            Sub-total: {calculateTotal(cat.id)}%
+                                        </Text>
+                                    </View>
                                 )}
                             </View>
                         ))}
 
                         <PressableScale style={[styles.addMainBtn, { borderColor: theme.colors.text }]} onPress={() => handleAddCategory(null)}>
                             <Plus size={20} color={theme.colors.text} />
-                            <Text style={[styles.addMainText, { color: theme.colors.text }]}>Add Main Category</Text>
+                            <Text style={[styles.addMainText, { color: theme.colors.text }]}>Add Category</Text>
                         </PressableScale>
+
+                        {isModified && (
+                            <PressableScale style={[styles.saveRulesBtn, { backgroundColor: theme.colors.text }]} onPress={handleSave}>
+                                <Save size={20} color={theme.colors.background} />
+                                <Text style={[styles.saveRulesBtnText, { color: theme.colors.background }]}>Update Rules</Text>
+                            </PressableScale>
+                        )}
+
+                        
                     </View>
                 )}
 
@@ -382,15 +403,6 @@ export default function Settings() {
                 </View>
 
             </ScrollView>
-
-            {isModified && (
-                <View style={[styles.footer, { bottom: insets.bottom + 50, paddingBottom: insets.bottom > 0 ? insets.bottom : theme.spacing.lg }]}>
-                    <PressableScale style={[styles.saveBtn, { backgroundColor: theme.colors.text }]} onPress={handleSave}>
-                        <Save size={20} color={theme.colors.background} />
-                        <Text style={[styles.saveBtnText, { color: theme.colors.background }]}>Save Rules</Text>
-                    </PressableScale>
-                </View>
-            )}
         </View>
     );
 }
@@ -559,11 +571,25 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.border,
         marginRight: theme.spacing.sm,
     },
+    subTotalRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: theme.spacing.xs,
+    },
     subTotal: {
         fontSize: 10,
-        textAlign: 'right',
-        marginTop: theme.spacing.xs,
+        fontWeight: 'bold',
         color: theme.colors.textSecondary,
+    },
+    othersHint: {
+        fontSize: 10,
+        marginTop: 2,
+    },
+    subOthersHint: {
+        fontSize: 10,
+        color: theme.colors.gray.medium,
+        fontStyle: 'italic',
     },
     addMainBtn: {
         flexDirection: 'row',
@@ -572,33 +598,24 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderStyle: 'dashed',
         borderColor: theme.colors.black,
-        padding: theme.spacing.md,
+        padding: theme.spacing.sm,
         borderRadius: theme.roundness.md,
-        marginTop: theme.spacing.md,
+        marginBottom: theme.spacing.md,
     },
     addMainText: {
         marginLeft: theme.spacing.sm,
         fontWeight: theme.typography.weight.bold as any,
     },
-    footer: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: theme.colors.background,
-        borderTopWidth: 1,
-        borderTopColor: theme.colors.border,
-        padding: theme.spacing.lg,
-    },
-    saveBtn: {
-        backgroundColor: theme.colors.black,
+    saveRulesBtn: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         padding: theme.spacing.md,
         borderRadius: theme.roundness.md,
+        marginBottom: theme.spacing.md,
     },
-    saveBtnText: {
+    saveRulesBtnText: {
+        fontSize: theme.typography.size.md,
         fontWeight: theme.typography.weight.bold as any,
         marginLeft: theme.spacing.sm,
     },

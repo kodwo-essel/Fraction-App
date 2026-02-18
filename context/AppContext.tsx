@@ -64,6 +64,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         { id: Crypto.randomUUID(), name: 'Core', percentage: 25, type: 'main', is_protected: false },
                         { id: Crypto.randomUUID(), name: 'Lifestyle', percentage: 20, type: 'main', is_protected: false },
                         { id: Crypto.randomUUID(), name: 'Personal', percentage: 15, type: 'main', is_protected: false },
+                        { id: 'system_others', name: 'Others', percentage: 0, type: 'main', is_protected: true },
                     ];
 
                     // Wealth Subcategories
@@ -86,6 +87,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     await database.runAsync(
                         'INSERT INTO rule_versions (id, config_snapshot) VALUES (?, ?)',
                         [defaultRuleId, JSON.stringify(defaultCats)]
+                    );
+                }
+
+                // Ensure "Others" category exists for legacy users
+                const othersExists = await database.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM categories WHERE id = ?', ['system_others']);
+                if (othersExists?.count === 0) {
+                    await database.runAsync(
+                        'INSERT INTO categories (id, name, percentage, type, parent_id, is_protected) VALUES (?, ?, ?, ?, ?, ?)',
+                        ['system_others', 'Others', 0, 'main', null, 1]
                     );
                 }
                 // Load user name
@@ -230,6 +240,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 { id: Crypto.randomUUID(), name: 'Core', percentage: 25, type: 'main', is_protected: false },
                 { id: Crypto.randomUUID(), name: 'Lifestyle', percentage: 20, type: 'main', is_protected: false },
                 { id: Crypto.randomUUID(), name: 'Personal', percentage: 15, type: 'main', is_protected: false },
+                { id: 'system_others', name: 'Others', percentage: 0, type: 'main', is_protected: true },
             ];
 
             const wealthId = defaultCats.find(c => c.name === 'Wealth')?.id;
