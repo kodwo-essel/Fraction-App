@@ -11,7 +11,7 @@ import { theme } from '../../constants/theme';
 import { useApp } from '../../context/AppContext';
 
 export default function Dashboard() {
-  const { categories, transactions, getCategoryBalance, isLoading } = useApp();
+  const { categories, transactions, getCategoryBalance, isLoading, userName } = useApp();
   const insets = useSafeAreaInsets();
 
   const totalIncome = React.useMemo(() => {
@@ -103,8 +103,8 @@ export default function Dashboard() {
         <EntryTransition delay={100}>
           <View style={styles.header}>
             <View>
-              <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>Welcome to</Text>
-              <Text style={[styles.brand, { color: theme.colors.text }]}>Fraction</Text>
+              <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>Welcome back,</Text>
+              <Text style={[styles.brand, { color: theme.colors.text }]}>{userName || 'User'}</Text>
             </View>
             <Image
               source={require('../../assets/images/icon.png')}

@@ -13,6 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useState } from 'react';
 import { LockScreen } from '../components/LockScreen';
+import { SetupScreen } from '../components/SetupScreen';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -85,6 +86,7 @@ function RootLayoutContent() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="dark" />
+      <SetupScreen />
     </View>
   );
 }

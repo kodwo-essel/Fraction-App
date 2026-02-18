@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import { SQLiteDatabase } from 'expo-sqlite';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
@@ -9,6 +10,8 @@ interface AppContextType {
     transactions: Transaction[];
     currentRule: RuleVersion | null;
     isLoading: boolean;
+    userName: string | null;
+    setUserName: (name: string) => Promise<void>;
     addIncome: (amount: number, name: string, description?: string) => Promise<void>;
     addExpense: (categoryId: string, amount: number, name: string, description?: string) => Promise<void>;
     updateCategories: (updatedCategories: Category[]) => Promise<void>;
@@ -27,6 +30,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [categories, setCategories] = useState<Category[]>([]);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [currentRule, setCurrentRule] = useState<RuleVersion | null>(null);
+    const [userName, setUserNameState] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     const refreshData = useCallback(async () => {
@@ -84,6 +88,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         [defaultRuleId, JSON.stringify(defaultCats)]
                     );
                 }
+                // Load user name
+                const savedName = await AsyncStorage.getItem('user_name');
+                setUserNameState(savedName);
             } catch (error) {
                 console.error('Critical Database Error:', error);
                 // We could set an error state here and show it in the UI
@@ -93,6 +100,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
         setup();
     }, []);
+
+    const setUserName = async (name: string) => {
+        setUserNameState(name);
+        await AsyncStorage.setItem('user_name', name);
+    };
 
     useEffect(() => {
         if (db) refreshData();
@@ -261,7 +273,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             categories,
             transactions,
             currentRule,
+            userName,
             isLoading,
+            setUserName,
             addIncome,
             addExpense,
             updateCategories,

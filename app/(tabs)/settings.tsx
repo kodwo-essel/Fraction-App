@@ -12,7 +12,7 @@ import { theme } from '../../constants/theme';
 import { useApp } from '../../context/AppContext';
 
 export default function Settings() {
-    const { categories, isLoading, deleteCategory, updateCategories, clearTransactions, resetDatabase } = useApp();
+    const { categories, isLoading, deleteCategory, updateCategories, clearTransactions, resetDatabase, userName, setUserName } = useApp();
     // ...
     const handleResetApp = () => {
         Alert.alert(
@@ -224,6 +224,24 @@ export default function Settings() {
                 <EntryTransition delay={0}>
                     <Text style={styles.title}>Settings</Text>
                 </EntryTransition>
+
+                <Text style={styles.sectionHeader}>Personalization</Text>
+                <View style={styles.sectionCard}>
+                    <View style={styles.settingItem}>
+                        <View style={styles.settingLeft}>
+                            <View style={styles.iconBox}>
+                                <Info size={18} color={theme.colors.text} />
+                            </View>
+                            <TextInput
+                                style={styles.settingLabel}
+                                value={userName || ''}
+                                onChangeText={setUserName}
+                                placeholder="Your Name"
+                                placeholderTextColor={theme.colors.gray.medium}
+                            />
+                        </View>
+                    </View>
+                </View>
 
                 <Text style={styles.sectionHeader}>Security</Text>
                 <View style={styles.sectionCard}>
