@@ -163,6 +163,42 @@ export const initDatabase = async () => {
       throw e;
     }
 
+    // 9. Migration: make category_id nullable with ON DELETE SET NULL
+    // Allows categories to be deleted without wiping transaction history
+    try {
+      const txCols = await db.getAllAsync<{ name: string; notnull: number }>(
+        'PRAGMA table_info(transactions);'
+      );
+      const categoryCol = txCols.find(c => c.name === 'category_id');
+
+      if (categoryCol && categoryCol.notnull === 1) {
+        // Must recreate the table — SQLite doesn't support ALTER COLUMN
+        await db.execAsync('PRAGMA foreign_keys = OFF;');
+        await db.execAsync(`
+          CREATE TABLE IF NOT EXISTS transactions_v2 (
+            id TEXT PRIMARY KEY NOT NULL,
+            type TEXT CHECK(type IN ('income', 'expense')) NOT NULL,
+            amount REAL NOT NULL,
+            category_id TEXT,
+            name TEXT NOT NULL,
+            description TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            rule_snapshot TEXT NOT NULL,
+            group_id TEXT,
+            total_amount REAL,
+            FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE SET NULL
+          );
+        `);
+        await db.execAsync('INSERT INTO transactions_v2 SELECT * FROM transactions;');
+        await db.execAsync('DROP TABLE transactions;');
+        await db.execAsync('ALTER TABLE transactions_v2 RENAME TO transactions;');
+        await db.execAsync('PRAGMA foreign_keys = ON;');
+      }
+    } catch (e) {
+      console.error('Error migrating category_id to nullable:', e);
+      throw e;
+    }
+
     dbInstance = db;
     return db;
   } catch (e) {

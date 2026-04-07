@@ -257,7 +257,10 @@ export const applyConfig = async (
     config: ConfigFile
 ): Promise<void> => {
     await db.withTransactionAsync(async () => {
-        // Remove existing rules (cascade will handle sub-categories)
+        // Disable FKs so we can swap the entire category metadata without affecting transactions
+        await db.execAsync('PRAGMA foreign_keys = OFF;');
+        
+        // Remove existing rules
         await db.execAsync('DELETE FROM categories;');
 
         for (const cat of config.categories) {
@@ -269,6 +272,8 @@ export const applyConfig = async (
                  cat.is_protected ? 1 : 0, cat.created_at, cat.updated_at]
             );
         }
+
+        await db.execAsync('PRAGMA foreign_keys = ON;');
     });
 };
 

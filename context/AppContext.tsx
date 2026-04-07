@@ -204,13 +204,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const deleteCategory = async (id: string) => {
         if (!db) return;
-        const hasTransactions = await db.getFirstAsync<{ count: number }>(
-            'SELECT COUNT(*) as count FROM transactions WHERE category_id = ?',
-            [id]
-        );
-        if (hasTransactions && hasTransactions.count > 0) {
-            throw new Error('Cannot delete category with existing transactions.');
-        }
         await db.runAsync('DELETE FROM categories WHERE id = ?', [id]);
         await refreshData();
     };

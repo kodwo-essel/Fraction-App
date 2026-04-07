@@ -15,6 +15,7 @@ interface TransactionItemProps {
     description?: string;
     date: string;
     onDelete?: (id: string, groupId?: string) => void;
+    onPress?: () => void;
     groupId?: string;
 }
 
@@ -27,6 +28,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
     description,
     date,
     onDelete,
+    onPress,
     groupId
 }) => {
     const { currencyCode, theme, themeMode } = useApp();
@@ -34,7 +36,11 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
     const styles = getStyles(theme, themeMode);
 
     return (
-        <View style={styles.container}>
+        <PressableScale
+            disabled={!onPress}
+            onPress={onPress}
+            style={styles.container}
+        >
             <View style={styles.iconContainer}>
                 {isIncome ? (
                     <ArrowUpRight size={18} color={theme.colors.success} />
@@ -70,11 +76,18 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
                         {description}
                     </Text>
                 ) : null}
-                <Text variant="caption" color="textSecondary" style={styles.date}>
-                    {new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} • {new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </Text>
+                <View style={styles.footer}>
+                    <Text variant="caption" color="textSecondary" style={styles.date}>
+                        {new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} • {new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                    {onPress && (
+                        <View style={styles.chevronContainer}>
+                            <ArrowUpRight size={12} color={theme.colors.textSecondary} style={{ transform: [{ rotate: '45deg' }] }} />
+                        </View>
+                    )}
+                </View>
             </View>
-        </View>
+        </PressableScale>
     );
 };
 
@@ -132,7 +145,15 @@ const getStyles = (theme: any, mode: string) => StyleSheet.create({
         fontStyle: 'italic',
     },
     date: {
-        marginTop: 2,
         opacity: 0.8,
+    },
+    footer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 2,
+    },
+    chevronContainer: {
+        opacity: 0.4,
     },
 });

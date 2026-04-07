@@ -82,13 +82,29 @@ export default function Configuration() {
     };
 
     const handleDelete = async (id: string) => {
-        try {
-            await deleteCategory(id);
-            setLocalCategories(prev => prev.filter(c => c.id !== id));
-            setIsModified(true);
-        } catch (error: any) {
-            showAlert({ title: 'Restriction', message: error.message });
-        }
+        const category = localCategories.find(c => c.id === id);
+        if (!category) return;
+
+        showAlert({
+            title: 'Delete Rule',
+            message: `Are you sure you want to delete "${category.name}"? Past transactions linked to this rule will be preserved but marked as former categories.`,
+            buttons: [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await deleteCategory(id);
+                            setLocalCategories(prev => prev.filter(c => c.id !== id));
+                            setIsModified(true);
+                        } catch (error: any) {
+                            showAlert({ title: 'Error', message: error.message });
+                        }
+                    }
+                }
+            ]
+        });
     };
 
     const handleSave = async () => {

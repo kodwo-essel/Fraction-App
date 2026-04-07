@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
@@ -101,6 +102,21 @@ export default function Dashboard() {
           </View>
         </EntryTransition>
 
+        <EntryTransition delay={250}>
+          <PressableScale onPress={() => router.push('/reports')}>
+            <Card style={styles.reportsCard}>
+              <View style={styles.reportsIconContainer}>
+                <Ionicons name="analytics" size={24} color={theme.colors.primary} />
+              </View>
+              <View style={styles.reportsTextContainer}>
+                <Text variant="h3">Analytical Reports</Text>
+                <Text variant="caption" color="textSecondary">View all-time summary & trends</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+            </Card>
+          </PressableScale>
+        </EntryTransition>
+
         <EntryTransition delay={300}>
           <View style={styles.sectionHeader}>
             <Text variant="label" color="textSecondary">Distribution</Text>
@@ -191,6 +207,24 @@ const getStyles = (theme: any) => StyleSheet.create({
   statBox: {
     flex: 1,
     padding: theme.spacing.md,
+  },
+  reportsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.xl,
+  },
+  reportsIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: theme.mode === 'light' ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
+  },
+  reportsTextContainer: {
+    flex: 1,
   },
   statLabel: {
     marginBottom: 4,

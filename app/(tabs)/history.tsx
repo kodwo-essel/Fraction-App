@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
@@ -13,22 +14,29 @@ export default function History() {
     const { transactions, categories, isLoading, deleteTransaction, theme, themeMode } = useApp();
     const { showAlert } = useAlert();
     const insets = useSafeAreaInsets();
+    const router = useRouter();
     const styles = getStyles(theme, themeMode);
 
     const groupedTransactions = React.useMemo(() => {
         const groups: Record<string, any> = {};
+        const standalone: any[] = [];
 
         transactions.forEach(t => {
-            if (!groups[t.group_id]) {
-                groups[t.group_id] = {
-                    ...t,
-                    amount: t.total_amount || t.amount,
-                    isGroup: t.type === 'income' && transactions.filter(x => x.group_id === t.group_id).length > 1
-                };
+            if (t.group_id) {
+                if (!groups[t.group_id]) {
+                    groups[t.group_id] = {
+                        ...t,
+                        amount: t.total_amount || t.amount,
+                        isGroup: t.type === 'income'
+                    };
+                }
+            } else {
+                standalone.push({ ...t, isGroup: false });
             }
         });
 
-        return Object.values(groups).sort((a: any, b: any) =>
+        const allItems = [...Object.values(groups), ...standalone];
+        return allItems.sort((a: any, b: any) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
     }, [transactions]);
@@ -62,14 +70,30 @@ export default function History() {
 
     const getCategoryName = (item: any) => {
         if (item.isGroup) return 'System Allocation';
-        return categories.find(c => c.id === item.category_id)?.name || 'Uncategorized';
+        const currentCat = categories.find(c => c.id === item.category_id);
+        if (currentCat) return currentCat.name;
+
+        // Fallback to snapshot for deleted categories
+        try {
+            if (item.rule_snapshot) {
+                const snapshot = JSON.parse(item.rule_snapshot);
+                const historicalCat = Array.isArray(snapshot) 
+                    ? snapshot.find((c: any) => c.id === item.category_id)
+                    : null;
+                if (historicalCat) return `Former: ${historicalCat.name}`;
+            }
+        } catch (e) {
+            console.error('Error parsing rule snapshot:', e);
+        }
+
+        return 'Uncategorized';
     };
 
     return (
         <View style={styles.container}>
             <FlatList
                 data={groupedTransactions}
-                keyExtractor={(item: any) => item.group_id}
+                keyExtractor={(item: any) => item.group_id || item.id}
                 contentContainerStyle={[
                     styles.content,
                     { paddingTop: insets.top + theme.spacing.lg, paddingBottom: insets.bottom + 100 }
@@ -87,15 +111,15 @@ export default function History() {
                 renderItem={({ item, index }: { item: any; index: number }) => (
                     <EntryTransition delay={index * 50}>
                         <TransactionItem
-                            id={item.id}
-                            groupId={item.group_id}
-                            type={item.type}
-                            amount={item.amount}
-                            categoryName={getCategoryName(item)}
-                            name={item.name}
-                            description={item.description}
+                            {...item}
                             date={item.created_at}
+                            groupId={item.group_id}
+                            categoryName={getCategoryName(item)}
                             onDelete={handleDelete}
+                            onPress={item.isGroup ? () => router.push({
+                                pathname: '/transaction/[groupId]',
+                                params: { groupId: item.group_id }
+                            } as any) : undefined}
                         />
                     </EntryTransition>
                 )}

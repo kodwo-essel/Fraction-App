@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -78,6 +79,15 @@ export default function Disburser() {
                 ]}
             >
                 <EntryTransition delay={100}>
+                    <View style={styles.header}>
+                        <Text variant="h1" style={styles.title}>Disburser</Text>
+                        <Card style={styles.iconContainer}>
+                            <Ionicons name="cash-outline" size={22} color={theme.colors.text} />
+                        </Card>
+                    </View>
+                </EntryTransition>
+
+                <EntryTransition delay={150}>
                     <Card style={styles.inputCard}>
                         <Text variant="label" style={styles.label}>Allocation Details</Text>
 
@@ -211,7 +221,27 @@ const getStyles = (theme: any, mode: string) => StyleSheet.create({
         backgroundColor: theme.colors.background,
     },
     content: {
-        padding: theme.spacing.lg,
+        paddingHorizontal: theme.spacing.lg,
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: theme.spacing.xl,
+    },
+    title: {
+        letterSpacing: -1.5,
+    },
+    iconContainer: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 0,
+        backgroundColor: mode === 'light' ? 'rgba(0,0,0,0.03)' : 'rgba(255, 255, 255, 0.05)',
+        borderWidth: 1,
+        borderColor: theme.colors.border,
     },
     inputCard: {
         marginBottom: theme.spacing.xl,
