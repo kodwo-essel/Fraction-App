@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { theme } from '../constants/theme';
+import { StyleSheet } from 'react-native';
+import { useApp } from '../context/AppContext';
 import { formatCurrency } from '../services/allocation';
+import { Text, Card } from './Themed';
 
 interface BalanceCardProps {
     label: string;
@@ -11,48 +12,37 @@ interface BalanceCardProps {
 }
 
 export const BalanceCard: React.FC<BalanceCardProps> = ({ label, amount, subText, large }) => {
+    const { currencyCode, theme } = useApp();
+    const styles = getStyles(theme);
+
     return (
-        <View style={[
-            styles.container,
-            { backgroundColor: theme.colors.background, borderColor: theme.colors.border },
-            large ? [styles.containerLarge, { backgroundColor: theme.colors.text }] : undefined
-        ]}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>{label}</Text>
-            <Text style={[
+        <Card style={styles.container}>
+            <Text variant="label" color="textSecondary" style={styles.label}>{label}</Text>
+            <Text 
+              variant={large ? 'h1' : 'h2'} 
+              style={[
                 styles.amount,
-                { color: theme.colors.text },
-                large ? { color: theme.colors.background } : undefined
-            ]}>
-                {formatCurrency(amount)}
+                large && { fontSize: theme.typography.size.xxxl }
+              ]}
+            >
+                {formatCurrency(amount, currencyCode)}
             </Text>
-            {subText ? <Text style={[styles.subText, { color: theme.colors.textSecondary }]}>{subText}</Text> : null}
-        </View>
+            {subText ? <Text variant="caption" color="textSecondary" style={styles.subText}>{subText}</Text> : null}
+        </Card>
     );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     container: {
-        borderWidth: 1,
-        padding: theme.spacing.md,
-        borderRadius: theme.roundness.md,
         marginBottom: theme.spacing.md,
     },
-    containerLarge: {
-        padding: theme.spacing.lg,
-        borderWidth: 0,
-    },
     label: {
-        fontSize: theme.typography.size.sm,
         marginBottom: theme.spacing.xs,
-        textTransform: 'uppercase',
-        letterSpacing: 1,
     },
     amount: {
-        fontSize: theme.typography.size.xl,
-        fontWeight: theme.typography.weight.bold as any,
+        letterSpacing: -1,
     },
     subText: {
-        fontSize: theme.typography.size.xs,
         marginTop: theme.spacing.xs,
     },
 });

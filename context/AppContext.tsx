@@ -4,6 +4,7 @@ import { SQLiteDatabase } from 'expo-sqlite';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { calculateAllocation, validatePercentages } from '../services/allocation';
 import { Category, initDatabase, RuleVersion, Transaction } from '../services/database';
+import { darkTheme, lightTheme, Theme } from '../constants/theme';
 
 interface AppContextType {
     categories: Category[];
@@ -11,7 +12,10 @@ interface AppContextType {
     currentRule: RuleVersion | null;
     isLoading: boolean;
     userName: string | null;
+    themeMode: 'light' | 'dark';
+    theme: Theme;
     setUserName: (name: string) => Promise<void>;
+    setThemeMode: (mode: 'light' | 'dark') => Promise<void>;
     addIncome: (amount: number, name: string, description?: string) => Promise<void>;
     addExpense: (categoryId: string, amount: number, name: string, description?: string) => Promise<void>;
     updateCategories: (updatedCategories: Category[]) => Promise<void>;
@@ -19,6 +23,8 @@ interface AppContextType {
     deleteTransaction: (id: string, groupId?: string) => Promise<void>;
     clearTransactions: () => Promise<void>;
     resetDatabase: () => Promise<void>;
+    currencyCode: string;
+    setCurrencyCode: (code: string) => Promise<void>;
     getCategoryBalance: (id: string) => number;
     refreshData: () => Promise<void>;
 }
@@ -31,7 +37,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [currentRule, setCurrentRule] = useState<RuleVersion | null>(null);
     const [userName, setUserNameState] = useState<string | null>(null);
+    const [currencyCode, setCurrencyCodeState] = useState<string>('GHS');
+    const [themeMode, setThemeModeState] = useState<'light' | 'dark'>('dark');
     const [isLoading, setIsLoading] = useState(true);
+
+    const theme = themeMode === 'light' ? lightTheme : darkTheme;
 
     const refreshData = useCallback(async () => {
         if (!db) return;
@@ -77,9 +87,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         );
                     }
                 }
-                // Load user name
-                const savedName = await AsyncStorage.getItem('user_name');
+                // Load user settings
+                const [savedName, savedCurrency, savedTheme] = await Promise.all([
+                    AsyncStorage.getItem('user_name'),
+                    AsyncStorage.getItem('currency_code'),
+                    AsyncStorage.getItem('theme_mode')
+                ]);
                 setUserNameState(savedName);
+                if (savedCurrency) setCurrencyCodeState(savedCurrency);
+                if (savedTheme === 'light' || savedTheme === 'dark') {
+                  setThemeModeState(savedTheme as 'light' | 'dark');
+                }
             } catch (error) {
                 console.error('Critical Database Error:', error);
                 // We could set an error state here and show it in the UI
@@ -93,6 +111,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const setUserName = async (name: string) => {
         setUserNameState(name);
         await AsyncStorage.setItem('user_name', name);
+    };
+
+    const setThemeMode = async (mode: 'light' | 'dark') => {
+        setThemeModeState(mode);
+        await AsyncStorage.setItem('theme_mode', mode);
+    };
+
+    const setCurrencyCode = async (code: string) => {
+        setCurrencyCodeState(code);
+        await AsyncStorage.setItem('currency_code', code);
     };
 
     useEffect(() => {
@@ -225,8 +253,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
 
         // Clear personality and settings
-        await AsyncStorage.multiRemove(['user_name', 'biometric_enabled', 'biometrics_enabled']);
+        await AsyncStorage.multiRemove(['user_name', 'biometric_enabled', 'biometrics_enabled', 'theme_mode']);
         setUserNameState(null);
+        setThemeModeState('dark');
 
         await refreshData();
     };
@@ -248,8 +277,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             transactions,
             currentRule,
             userName,
+            currencyCode,
+            themeMode,
+            theme,
             isLoading,
             setUserName,
+            setThemeMode,
+            setCurrencyCode,
             addIncome,
             addExpense,
             updateCategories,
@@ -272,3 +306,4 @@ export const useApp = () => {
     }
     return context;
 };
+

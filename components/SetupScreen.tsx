@@ -1,19 +1,19 @@
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
-import { theme } from '../constants/theme';
+import { KeyboardAvoidingView, Modal, Platform, StyleSheet, TextInput, View } from 'react-native';
 import { useApp } from '../context/AppContext';
 import { EntryTransition } from './EntryTransition';
 import { PressableScale } from './PressableScale';
+import { Text, Button } from './Themed';
 
 export const SetupScreen: React.FC = () => {
-    const { userName, setUserName } = useApp();
+    const { userName, setUserName, theme, themeMode } = useApp();
     const router = useRouter();
     const [name, setName] = useState('');
     const [isVisible, setIsVisible] = useState(false);
+    const styles = getStyles(theme);
 
-    // Only show if userName is null
     React.useEffect(() => {
         if (userName === null) {
             setIsVisible(true);
@@ -38,36 +38,38 @@ export const SetupScreen: React.FC = () => {
             animationType="fade"
             statusBarTranslucent
         >
-            <StatusBar hidden />
+            <StatusBar style={themeMode === 'light' ? 'dark' : 'light'} />
             <View style={styles.overlay}>
                 <KeyboardAvoidingView
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                     style={styles.container}
                 >
                     <EntryTransition delay={100}>
-                        <Text style={styles.title}>Welcome to Fraction</Text>
-                        <Text style={styles.subtitle}>Let's start with your name.</Text>
+                        <Text variant="h1" style={styles.title}>Welcome to Fraction</Text>
+                        <Text variant="body" color="textSecondary" style={styles.subtitle}>
+                            Let's start by personalizing your wealth dashboard. What's your name?
+                        </Text>
 
                         <TextInput
-                            style={styles.input}
+                            style={[styles.input, { color: theme.colors.text, borderBottomColor: theme.colors.border }]}
                             placeholder="Your Name"
-                            placeholderTextColor={theme.colors.gray.medium}
+                            placeholderTextColor={theme.colors.textSecondary}
                             value={name}
                             onChangeText={setName}
                             autoFocus
                             autoCapitalize="words"
+                            selectionColor={theme.colors.primary}
                         />
 
-                        <PressableScale
-                            style={[
-                                styles.button,
-                                !name.trim() && { backgroundColor: theme.colors.gray.medium }
-                            ]}
+                        <Button
+                            title="Begin Experience"
                             onPress={handleContinue}
                             disabled={!name.trim()}
-                        >
-                            <Text style={styles.buttonText}>Get Started</Text>
-                        </PressableScale>
+                            style={[
+                                styles.button,
+                                !name.trim() && { opacity: 0.5 }
+                            ]}
+                        />
                     </EntryTransition>
                 </KeyboardAvoidingView>
             </View>
@@ -75,7 +77,7 @@ export const SetupScreen: React.FC = () => {
     );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     overlay: {
         flex: 1,
         backgroundColor: theme.colors.background,
@@ -86,33 +88,21 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     title: {
-        fontSize: 32,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text,
         marginBottom: theme.spacing.xs,
+        letterSpacing: -1.5,
     },
     subtitle: {
-        fontSize: theme.typography.size.md,
-        color: theme.colors.textSecondary,
         marginBottom: theme.spacing.xxl,
+        lineHeight: 24,
     },
     input: {
-        fontSize: 24,
-        color: theme.colors.text,
-        borderBottomWidth: 2,
-        borderBottomColor: theme.colors.text,
-        paddingBottom: theme.spacing.sm,
+        fontFamily: theme.typography.fontFamily.medium,
+        fontSize: 32,
+        borderBottomWidth: 1,
+        paddingBottom: theme.spacing.md,
         marginBottom: theme.spacing.xxl,
     },
     button: {
-        backgroundColor: theme.colors.text,
-        padding: theme.spacing.lg,
-        borderRadius: theme.roundness.md,
-        alignItems: 'center',
-    },
-    buttonText: {
-        color: theme.colors.background,
-        fontSize: theme.typography.size.md,
-        fontWeight: theme.typography.weight.bold as any,
+        marginTop: theme.spacing.lg,
     },
 });

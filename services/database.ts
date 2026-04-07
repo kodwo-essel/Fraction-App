@@ -150,6 +150,19 @@ export const initDatabase = async () => {
       throw e;
     }
 
+    // 8. Backup hashes table (for duplicate-restore prevention)
+    try {
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS backup_hashes (
+          hash TEXT PRIMARY KEY NOT NULL,
+          restored_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (e) {
+      console.error('Error creating backup_hashes table:', e);
+      throw e;
+    }
+
     dbInstance = db;
     return db;
   } catch (e) {

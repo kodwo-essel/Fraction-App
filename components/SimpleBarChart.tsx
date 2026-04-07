@@ -1,7 +1,8 @@
 import React from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, StyleSheet, View } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
-import { theme } from '../constants/theme';
+import { useApp } from '../context/AppContext';
+import { Text } from './Themed';
 
 interface BarData {
     label: string;
@@ -14,6 +15,8 @@ interface BarChartProps {
 }
 
 export const SimpleBarChart: React.FC<BarChartProps> = ({ data, height = 200 }) => {
+    const { theme } = useApp();
+    const styles = getStyles(theme);
     const chartWidth = Dimensions.get('window').width - 64;
     const barWidth = (chartWidth / data.length) * 0.7;
     const gap = (chartWidth / data.length) * 0.3;
@@ -31,14 +34,14 @@ export const SimpleBarChart: React.FC<BarChartProps> = ({ data, height = 200 }) 
                             y={height - barHeight}
                             width={barWidth}
                             height={barHeight}
-                            fill={theme.colors.black}
+                            fill={theme.colors.text}
                         />
                     );
                 })}
             </Svg>
             <View style={[styles.labels, { width: chartWidth }]}>
                 {data.map(item => (
-                    <Text key={item.label} style={[styles.labelText, { width: barWidth + gap }]}>
+                    <Text key={item.label} variant="caption" color="textSecondary" style={[styles.labelText, { width: barWidth + gap }]}>
                         {item.label}
                     </Text>
                 ))}
@@ -47,7 +50,7 @@ export const SimpleBarChart: React.FC<BarChartProps> = ({ data, height = 200 }) 
     );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     container: {
         padding: theme.spacing.md,
         backgroundColor: theme.colors.background,
@@ -58,8 +61,6 @@ const styles = StyleSheet.create({
         marginTop: theme.spacing.sm,
     },
     labelText: {
-        fontSize: 10,
-        color: theme.colors.textSecondary,
         textAlign: 'center',
     },
 });

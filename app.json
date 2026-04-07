@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "fraction",
+    "name": "Fraction",
     "slug": "fraction",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#05070A"
     },
     "ios": {
       "supportsTablet": true
@@ -19,7 +19,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#05070A"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,

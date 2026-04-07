@@ -1,34 +1,68 @@
 import { StatusBar } from 'expo-status-bar';
-import { Platform, StyleSheet } from 'react-native';
-
-import { theme } from '@/constants/theme';
-import { Text, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
+import { useApp } from '../context/AppContext';
+import { Text, Card } from '../components/Themed';
 
 export default function ModalScreen() {
+  const { theme, themeMode } = useApp();
+  const styles = getStyles(theme, themeMode);
+  
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Text style={[styles.title, { color: theme.colors.text }]}>Modal</Text>
-      <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
+    <View style={styles.container}>
+      <Card 
+        gradient 
+        gradientColors={themeMode === 'light' ? ['rgba(0,0,0,0.05)', 'rgba(255,255,255,0.85)'] : ['rgba(255,255,255,0.1)', 'rgba(0,0,0,0.85)']} 
+        style={styles.headerCard}
+      >
+        <Text variant="h1" style={styles.title}>Finance Insights</Text>
+        <Text variant="caption" color="textSecondary">Premium Distribution Analysis</Text>
+      </Card>
+      
+      <Card style={styles.content}>
+        <Text variant="h2" style={styles.title}>Information</Text>
+        <View style={styles.separator} />
+        
+        <Text variant="body" color="textSecondary" style={styles.description}>
+          This is a premium information space. Use this area for additional context or settings details.
+        </Text>
+      </Card>
 
-      {/* Use a light status bar on iOS to account for the black space above the modal */}
-      <StatusBar style={Platform.OS === 'ios' ? 'light' : 'auto'} />
+      <StatusBar style={themeMode === 'light' ? 'dark' : 'light'} />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any, mode: string) => StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: theme.colors.background,
     alignItems: 'center',
     justifyContent: 'center',
+    padding: theme.spacing.lg,
+  },
+  headerCard: {
+    width: '100%',
+    padding: theme.spacing.xl,
+    marginBottom: theme.spacing.lg,
+    alignItems: 'center',
+  },
+  content: {
+    width: '100%',
+    alignItems: 'center',
   },
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    letterSpacing: -0.5,
+    marginBottom: 4,
+  },
+  description: {
+    textAlign: 'center',
+    lineHeight: 22,
+    marginTop: theme.spacing.md,
   },
   separator: {
-    marginVertical: 30,
+    marginVertical: theme.spacing.md,
     height: 1,
-    width: '80%',
+    width: '40%',
+    backgroundColor: theme.colors.border,
   },
 });

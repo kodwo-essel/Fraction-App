@@ -1,64 +1,46 @@
-import { Category } from '@/services/database';
+import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Crypto from 'expo-crypto';
 import * as LocalAuthentication from 'expo-local-authentication';
-import { ChevronRight, Database, Info, Lock, Plus, Save, Trash2 } from 'lucide-react-native';
+import { ArchiveRestore, ChevronRight, Database, HardDrive, Info, Lock, Settings2, Share2, Trash2, User } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useApp } from '../../context/AppContext';
+import { useAlert } from '../../context/AlertContext';
 import { EntryTransition } from '../../components/EntryTransition';
 import { PressableScale } from '../../components/PressableScale';
-import { theme } from '../../constants/theme';
-import { useApp } from '../../context/AppContext';
+import { Text, Card } from '../../components/Themed';
+import { initDatabase } from '../../services/database';
+import { createBackup, pickBackupFile, applyBackup, exportConfig, pickConfigFile, applyConfig } from '../../services/backup';
 
 export default function Settings() {
-    const { categories, isLoading, deleteCategory, updateCategories, clearTransactions, resetDatabase, userName, setUserName } = useApp();
-    // ...
-    const handleResetApp = () => {
-        Alert.alert(
-            'Factory Reset',
-            'This will delete EVERYTHING: all transactions, custom categories, and rules. The app will return to its initial state. Are you absolutely sure?',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Reset Everything',
-                    style: 'destructive',
-                    onPress: () => {
-                        Alert.alert(
-                            'Final Warning',
-                            'This action is irreversible. All your financial records will be lost forever.',
-                            [
-                                { text: 'Back', style: 'cancel' },
-                                {
-                                    text: 'I Understand, Reset',
-                                    style: 'destructive',
-                                    onPress: async () => {
-                                        await resetDatabase();
-                                        Alert.alert('App Reset', 'The application has been restored to factory settings.');
-                                    }
-                                }
-                            ]
-                        );
-                    }
-                }
-            ]
-        );
-    };
-    const [localCategories, setLocalCategories] = useState<Category[]>([]);
-    const [isModified, setIsModified] = useState(false);
+    const { isLoading, clearTransactions, resetDatabase, refreshData, userName, setUserName, currencyCode, theme, themeMode, setThemeMode } = useApp();
+    const { showAlert } = useAlert();
     const insets = useSafeAreaInsets();
+    const router = useRouter();
 
-    // Toggles state
     const [biometrics, setBiometrics] = useState(false);
-    const [showRulesEditor, setShowRulesEditor] = useState(false);
+    const [tempUserName, setTempUserName] = useState(userName || '');
 
     useEffect(() => {
+        const loadSettings = async () => {
+            const biom = await AsyncStorage.getItem('biometric_enabled');
+            setBiometrics(biom === 'true');
+        };
         loadSettings();
     }, []);
 
-    const loadSettings = async () => {
-        const biom = await AsyncStorage.getItem('biometric_enabled');
-        setBiometrics(biom === 'true');
+    useEffect(() => {
+        setTempUserName(userName || '');
+    }, [userName]);
+
+    const styles = React.useMemo(() => getStyles(theme, themeMode), [theme, themeMode]);
+
+    if (isLoading) return null;
+
+    const handleSaveName = async () => {
+        await setUserName(tempUserName);
+        showAlert({ title: 'Updated', message: 'User identity has been updated successfully.' });
     };
 
     const toggleBiometrics = async (value: boolean) => {
@@ -67,7 +49,10 @@ export default function Settings() {
             const isEnrolled = await LocalAuthentication.isEnrolledAsync();
 
             if (!hasHardware || !isEnrolled) {
-                Alert.alert('Not Available', 'Biometric authentication is not set up on this device.');
+                showAlert({ 
+                    title: 'Not Available', 
+                    message: 'Biometric authentication is not set up on this device.' 
+                });
                 return;
             }
 
@@ -86,132 +71,176 @@ export default function Settings() {
     };
 
     const handleClearData = () => {
-        Alert.alert(
-            'Clear All Data',
-            'Are you sure you want to delete ALL transaction history? This cannot be undone.',
-            [
+        showAlert({
+            title: 'Clear History',
+            message: 'This will erase all recorded transactions. Your rules and architecture will remain intact.',
+            buttons: [
                 { text: 'Cancel', style: 'cancel' },
                 {
-                    text: 'Clear All',
+                    text: 'Clear',
                     style: 'destructive',
                     onPress: async () => {
                         await clearTransactions();
-                        Alert.alert('Success', 'All transaction history has been cleared.');
+                        showAlert({ title: 'Success', message: 'Transactions have been cleared.' });
                     }
                 }
             ]
-        );
+        });
     };
 
-    useEffect(() => {
-        if (categories.length > 0) {
-            setLocalCategories(JSON.parse(JSON.stringify(categories)));
-        }
-    }, [categories]);
-
-    const calculateTotal = (parentId: string | null) => {
-        return localCategories
-            .filter(c => c.parent_id === parentId)
-            .reduce((sum, c) => sum + (c.percentage || 0), 0);
+    const handleResetApp = () => {
+        showAlert({
+            title: 'Reset Everything',
+            message: 'This action wipes everything: identity, rules, and history. The app will return to its original state.',
+            buttons: [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Reset',
+                    style: 'destructive',
+                    onPress: async () => {
+                        await resetDatabase();
+                        showAlert({ title: 'Success', message: 'The system has been completely reset.' });
+                    }
+                }
+            ]
+        });
     };
 
-    const handleUpdatePercentage = (id: string, value: string) => {
-        const numValue = parseFloat(value) || 0;
-        setLocalCategories(prev => prev.map(c =>
-            c.id === id ? { ...c, percentage: numValue } : c
-        ));
-        setIsModified(true);
-    };
-
-    const handleUpdateName = (id: string, name: string) => {
-        setLocalCategories(prev => prev.map(c =>
-            c.id === id ? { ...c, name } : c
-        ));
-        setIsModified(true);
-    };
-
-    const handleToggleProtected = (id: string) => {
-        setLocalCategories(prev => prev.map(c =>
-            c.id === id ? { ...c, is_protected: !c.is_protected } : c
-        ));
-        setIsModified(true);
-    };
-
-    const handleAddCategory = (parentId: string | null = null) => {
-        const newCat: Category = {
-            id: Crypto.randomUUID(),
-            name: 'New Category',
-            percentage: 0,
-            type: parentId ? 'sub' : 'main',
-            parent_id: parentId,
-            is_protected: false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-        };
-        setLocalCategories(prev => [...prev, newCat]);
-        setIsModified(true);
-    };
-
-    const handleDelete = async (id: string) => {
+    const handleBackup = async () => {
         try {
-            await deleteCategory(id);
-            setLocalCategories(prev => prev.filter(c => c.id !== id));
-        } catch (error: any) {
-            Alert.alert('Cannot Delete', error.message);
+            const db = await initDatabase();
+            await createBackup(db, currencyCode, userName || '');
+        } catch (e: any) {
+            showAlert({ title: 'Backup Failed', message: e.message || 'Could not create backup.' });
         }
     };
 
-    const handleSave = async () => {
-        const mainTotal = calculateTotal(null);
-        if (mainTotal > 100.01) {
-            Alert.alert('Invalid Percentages', `Main categories cannot exceed 100% (Current: ${mainTotal}%)`);
-            return;
-        }
+    const handleRestore = async () => {
+        try {
+            const db = await initDatabase();
 
-        const mainsWithSubs = localCategories.filter(c =>
-            localCategories.some(sub => sub.parent_id === c.id)
-        );
-        for (const main of mainsWithSubs) {
-            const subTotal = calculateTotal(main.id);
-            if (subTotal > 100.01) {
-                Alert.alert('Invalid Sub-Percentages', `${main.name} subcategories cannot exceed 100% (Current: ${subTotal}%)`);
+            // Step 1: open file picker FIRST — no alert before this
+            const picked = await pickBackupFile(db);
+
+            if (picked.status === 'cancelled') return;
+
+            if (picked.status === 'duplicate') {
+                showAlert({
+                    title: 'Already Applied',
+                    message: 'This backup has already been restored. No changes were made.',
+                });
                 return;
             }
-        }
 
-        try {
-            await updateCategories(localCategories);
-            setIsModified(false);
-            Alert.alert('Success', 'Rules updated successfully.');
-        } catch (error: any) {
-            Alert.alert('Error', error.message);
+            if (picked.status === 'invalid') {
+                showAlert({ title: 'Invalid File', message: picked.reason });
+                return;
+            }
+
+            // Step 2: file is valid — now show confirmation (picker is fully closed)
+            const { data } = picked;
+            const backupDate = data.backup.created_at
+                ? new Date(data.backup.created_at).toLocaleDateString()
+                : 'unknown date';
+
+            showAlert({
+                title: 'Confirm Restore',
+                message: `Backup from ${backupDate} found. This will replace your current data. Continue?`,
+                buttons: [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                        text: 'Yes',
+                        style: 'default',
+                        onPress: async () => {
+                            try {
+                                await applyBackup(db, data);
+                                if (refreshData) await refreshData();
+                                showAlert({
+                                    title: 'Restored',
+                                    message: `Your data has been restored successfully.`,
+                                });
+                            } catch (e: any) {
+                                showAlert({ title: 'Restore Failed', message: e.message || 'Could not restore backup.' });
+                            }
+                        }
+                    }
+                ]
+            });
+        } catch (e: any) {
+            showAlert({ title: 'Restore Failed', message: e.message || 'Could not restore backup.' });
         }
     };
 
-    if (isLoading) return null;
+    const handleShareConfig = async () => {
+        try {
+            const db = await initDatabase();
+            await exportConfig(db);
+        } catch (e: any) {
+            showAlert({ title: 'Export Failed', message: e.message || 'Could not export configuration.' });
+        }
+    };
 
-    const mainCategories = localCategories.filter(c => c.type === 'main' && c.id !== 'system_others');
+    const handleImportConfig = async () => {
+        try {
+            const db = await initDatabase();
 
-    const SettingItem = ({ icon: Icon, label, value, onToggle, type = 'toggle' }: any) => (
-        <View style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-                <View style={styles.iconBox}>
-                    <Icon size={18} color={theme.colors.text} />
+            // Picker opens first — no alert before
+            const picked = await pickConfigFile();
+
+            if (picked.status === 'cancelled') return;
+
+            if (picked.status === 'invalid') {
+                showAlert({ title: 'Invalid File', message: picked.reason });
+                return;
+            }
+
+            const { data } = picked;
+            const ruleCount = data.categories.filter((c: any) => c.type === 'main').length;
+
+            showAlert({
+                title: 'Import Configuration',
+                message: `Found ${ruleCount} rule${ruleCount !== 1 ? 's' : ''}. This will replace your current rules. Your transactions will not be affected. Continue?`,
+                buttons: [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                        text: 'Import',
+                        style: 'default',
+                        onPress: async () => {
+                            try {
+                                await applyConfig(db, data);
+                                if (refreshData) await refreshData();
+                                showAlert({ title: 'Done', message: 'Configuration imported successfully.' });
+                            } catch (e: any) {
+                                showAlert({ title: 'Import Failed', message: e.message || 'Could not apply configuration.' });
+                            }
+                        }
+                    }
+                ]
+            });
+        } catch (e: any) {
+            showAlert({ title: 'Import Failed', message: e.message || 'Could not import configuration.' });
+        }
+    };
+
+    const NavItem = ({ icon: Icon, label, value, type = 'chevron', color, onPress }: any) => {
+        const iconColor = color || theme.colors.text;
+        return (
+            <PressableScale onPress={onPress}>
+                <View style={styles.navItem}>
+                    <View style={styles.navLeft}>
+                        <View style={[styles.iconBox, { backgroundColor: type === 'destructive' ? 'rgba(239, 68, 68, 0.1)' : (themeMode === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)') }]}>
+                            <Icon size={18} color={iconColor} />
+                        </View>
+                        <Text variant="body" style={[styles.navLabel, { color: iconColor }]}>{label}</Text>
+                    </View>
+                    <View style={styles.navRight}>
+                        {value && <Text variant="caption" color="textSecondary" style={{ marginRight: 8 }}>{value}</Text>}
+                        <ChevronRight size={18} color={theme.colors.textSecondary} />
+                    </View>
                 </View>
-                <Text style={styles.settingLabel}>{label}</Text>
-            </View>
-            {type === 'toggle' ? (
-                <Switch
-                    value={value}
-                    onValueChange={onToggle}
-                    trackColor={{ false: theme.colors.border, true: theme.colors.text }}
-                    thumbColor={theme.colors.white}
-                />
-            ) : (
-                <ChevronRight size={18} color={theme.colors.gray.medium} />
-            )}
-        </View>
-    );
+            </PressableScale>
+        );
+    };
 
     return (
         <View style={styles.container}>
@@ -222,407 +251,229 @@ export default function Settings() {
                 ]}
             >
                 <EntryTransition delay={0}>
-                    <Text style={styles.title}>Settings</Text>
+                    <View style={styles.header}>
+                        <Text variant="h1" style={styles.title}>Settings</Text>
+                        <Text variant="label" color="textSecondary">Configure your experience</Text>
+                    </View>
                 </EntryTransition>
 
-                <Text style={styles.sectionHeader}>Personalization</Text>
-                <View style={styles.sectionCard}>
-                    <View style={styles.settingItem}>
-                        <View style={styles.settingLeft}>
-                            <View style={styles.iconBox}>
-                                <Info size={18} color={theme.colors.text} />
+                <View style={styles.section}>
+                    <Text variant="label" color="textSecondary" style={styles.sectionHeader}>User Identity</Text>
+                    <Card style={styles.sectionCard}>
+                        <View style={styles.navItem}>
+                            <View style={styles.navLeft}>
+                                <View style={[styles.iconBox, { backgroundColor: themeMode === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)' }]}>
+                                    <User size={18} color={theme.colors.text} />
+                                </View>
+                                <TextInput
+                                    style={[styles.nameInput, { color: theme.colors.text }]}
+                                    value={tempUserName}
+                                    onChangeText={setTempUserName}
+                                    placeholder="Your Name"
+                                    placeholderTextColor={theme.colors.textSecondary}
+                                    selectionColor={theme.colors.primary}
+                                />
                             </View>
-                            <TextInput
-                                style={styles.settingLabel}
-                                value={userName || ''}
-                                onChangeText={setUserName}
-                                placeholder="Your Name"
-                                placeholderTextColor={theme.colors.gray.medium}
+                            {tempUserName !== (userName || '') && (
+                                <PressableScale onPress={handleSaveName} style={[styles.saveAction, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+                                    <Text variant="caption" color="success" style={{ fontFamily: theme.typography.fontFamily.bold }}>Save</Text>
+                                </PressableScale>
+                            )}
+                        </View>
+                    </Card>
+                </View>
+
+                <View style={styles.section}>
+                    <Text variant="label" color="textSecondary" style={styles.sectionHeader}>Appearance</Text>
+                    <Card style={styles.sectionCard}>
+                        <View style={styles.navItem}>
+                            <View style={styles.navLeft}>
+                                <View style={[styles.iconBox, { backgroundColor: themeMode === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)' }]}>
+                                    <Lock size={18} color={theme.colors.text} />
+                                </View>
+                                <Text variant="body" style={styles.navLabel}>Dark Mode</Text>
+                            </View>
+                            <Switch
+                                value={themeMode === 'dark'}
+                                onValueChange={(val) => setThemeMode(val ? 'dark' : 'light')}
+                                trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+                                thumbColor={theme.colors.background}
                             />
                         </View>
-                    </View>
+                    </Card>
                 </View>
 
-                <Text style={styles.sectionHeader}>Security</Text>
-                <View style={styles.sectionCard}>
-                    <SettingItem
-                        icon={Lock}
-                        label="Biometric Lock"
-                        value={biometrics}
-                        onToggle={toggleBiometrics}
-                    />
+                <View style={styles.section}>
+                    <Text variant="label" color="textSecondary" style={styles.sectionHeader}>Security</Text>
+                    <Card style={styles.sectionCard}>
+                        <View style={styles.navItem}>
+                            <View style={styles.navLeft}>
+                                <View style={[styles.iconBox, { backgroundColor: themeMode === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)' }]}>
+                                    <Lock size={18} color={theme.colors.text} />
+                                </View>
+                                <Text variant="body" style={styles.navLabel}>Biometric Lock</Text>
+                            </View>
+                            <Switch
+                                value={biometrics}
+                                onValueChange={toggleBiometrics}
+                                trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+                                thumbColor={theme.colors.background}
+                            />
+                        </View>
+                    </Card>
                 </View>
 
-                <Text style={styles.sectionHeader}>Configuration</Text>
-                <View style={styles.sectionCard}>
-                    <PressableScale onPress={() => setShowRulesEditor(!showRulesEditor)}>
-                        <SettingItem
-                            icon={Database}
-                            label="Allocation Rules"
-                            type="chevron"
+                <View style={styles.section}>
+                    <Text variant="label" color="textSecondary" style={styles.sectionHeader}>System Configuration</Text>
+                    <Card style={styles.sectionCard}>
+                        <NavItem 
+                            icon={Database} 
+                            label="My Rules" 
+                            value={currencyCode}
+                            onPress={() => router.push('/configuration')} 
                         />
-                    </PressableScale>
+                    </Card>
                 </View>
 
-                {showRulesEditor && (
-                    <View style={styles.rulesEditorContainer}>
-                        <View style={styles.headerRow}>
-                            <View>
-                                <Text style={styles.sectionTitle}>Main Categories</Text>
-                                {calculateTotal(null) < 100 && (
-                                    <Text style={[styles.othersHint, { color: theme.colors.textSecondary }]}>
-                                        + {100 - calculateTotal(null)}% will be auto-allocated to "Others"
-                                    </Text>
-                                )}
-                            </View>
-                            <Text style={[styles.total, calculateTotal(null) > 100.01 ? styles.totalError : undefined]}>
-                                Total: {calculateTotal(null)}%
-                            </Text>
-                        </View>
-
-                        {mainCategories.map(cat => (
-                            <View key={cat.id} style={styles.categoryBlock}>
-                                <View style={styles.catRow}>
-                                    <TextInput
-                                        style={[styles.nameInput, { color: theme.colors.text, borderBottomColor: theme.colors.border }]}
-                                        value={cat.name}
-                                        onChangeText={(val) => handleUpdateName(cat.id, val)}
-                                    />
-                                    <View style={styles.percentageWrapper}>
-                                        <TextInput
-                                            style={[styles.percentageInput, { color: theme.colors.text }]}
-                                            value={cat.percentage.toString()}
-                                            onChangeText={(val) => handleUpdatePercentage(cat.id, val)}
-                                            keyboardType="numeric"
-                                        />
-                                        <Text style={{ color: theme.colors.text }}>%</Text>
-                                    </View>
-                                    <PressableScale onPress={() => handleDelete(cat.id)} style={styles.deleteBtn}>
-                                        <Trash2 size={18} color={theme.colors.gray.medium} />
-                                    </PressableScale>
-                                </View>
-
-                                <View style={styles.optionsRow}>
-                                    <View style={styles.option}>
-                                        <Text style={[styles.optionLabel, { color: theme.colors.textSecondary }]}>Protected (Income Only)</Text>
-                                        <Switch
-                                            value={!!cat.is_protected}
-                                            onValueChange={() => handleToggleProtected(cat.id)}
-                                            trackColor={{ false: theme.colors.border, true: theme.colors.text }}
-                                        />
-                                    </View>
-                                    <PressableScale style={[styles.addSubBtn, { backgroundColor: theme.colors.gray.light }]} onPress={() => handleAddCategory(cat.id)}>
-                                        <Plus size={14} color={theme.colors.text} />
-                                        <Text style={[styles.addSubText, { color: theme.colors.text }]}>Add Subcategory</Text>
-                                    </PressableScale>
-                                </View>
-
-                                {localCategories.filter(s => s.parent_id === cat.id).map(sub => (
-                                    <View key={sub.id} style={styles.subCatRow}>
-                                        <View style={styles.indent} />
-                                        <TextInput
-                                            style={[styles.nameInput, styles.subNameInput]}
-                                            value={sub.name}
-                                            onChangeText={(val) => handleUpdateName(sub.id, val)}
-                                        />
-                                        <View style={styles.percentageWrapper}>
-                                            <TextInput
-                                                style={[styles.percentageInput, { color: theme.colors.text }]}
-                                                value={sub.percentage.toString()}
-                                                onChangeText={(val) => handleUpdatePercentage(sub.id, val)}
-                                                keyboardType="numeric"
-                                            />
-                                            <Text style={{ color: theme.colors.text }}>%</Text>
-                                        </View>
-                                        <PressableScale onPress={() => handleDelete(sub.id)} style={styles.deleteBtn}>
-                                            <Trash2 size={16} color={theme.colors.gray.medium} />
-                                        </PressableScale>
-                                    </View>
-                                ))}
-                                {localCategories.some(s => s.parent_id === cat.id) && (
-                                    <View style={styles.subTotalRow}>
-                                        {calculateTotal(cat.id) < 100 && (
-                                            <Text style={styles.subOthersHint}>+ {100 - calculateTotal(cat.id)}% to Others</Text>
-                                        )}
-                                        <Text style={[styles.subTotal, calculateTotal(cat.id) > 100.01 ? styles.totalError : undefined]}>
-                                            Sub-total: {calculateTotal(cat.id)}%
-                                        </Text>
-                                    </View>
-                                )}
-                            </View>
-                        ))}
-
-                        <PressableScale style={[styles.addMainBtn, { borderColor: theme.colors.text }]} onPress={() => handleAddCategory(null)}>
-                            <Plus size={20} color={theme.colors.text} />
-                            <Text style={[styles.addMainText, { color: theme.colors.text }]}>Add Category</Text>
-                        </PressableScale>
-
-                        {isModified && (
-                            <PressableScale style={[styles.saveRulesBtn, { backgroundColor: theme.colors.text }]} onPress={handleSave}>
-                                <Save size={20} color={theme.colors.background} />
-                                <Text style={[styles.saveRulesBtnText, { color: theme.colors.background }]}>Update Rules</Text>
-                            </PressableScale>
-                        )}
-
-                        
-                    </View>
-                )}
-
-                <Text style={styles.sectionHeader}>Data Management</Text>
-                <View style={[styles.sectionCard, { borderColor: '#FF000033' }]}>
-                    <PressableScale onPress={handleClearData}>
-                        <View style={styles.settingItem}>
-                            <View style={styles.settingLeft}>
-                                <View style={[styles.iconBox, { backgroundColor: '#FF000011' }]}>
-                                    <Trash2 size={18} color="#FF0000" />
-                                </View>
-                                <Text style={[styles.settingLabel, { color: '#FF0000' }]}>Clear All History</Text>
-                            </View>
-                            <ChevronRight size={18} color={theme.colors.gray.medium} />
-                        </View>
-                    </PressableScale>
-                    <View style={styles.itemSeparator} />
-                    <PressableScale onPress={handleResetApp}>
-                        <View style={styles.settingItem}>
-                            <View style={styles.settingLeft}>
-                                <View style={[styles.iconBox, { backgroundColor: '#FF000011' }]}>
-                                    <Database size={18} color="#FF0000" />
-                                </View>
-                                <Text style={[styles.settingLabel, { color: '#FF0000' }]}>Factory Reset App</Text>
-                            </View>
-                            <ChevronRight size={18} color={theme.colors.gray.medium} />
-                        </View>
-                    </PressableScale>
+                <View style={styles.section}>
+                    <Text variant="label" color="textSecondary" style={styles.sectionHeader}>Backup & Restore</Text>
+                    <Card style={styles.sectionCard}>
+                        <NavItem
+                            icon={HardDrive}
+                            label="Backup Data"
+                            onPress={handleBackup}
+                        />
+                        <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
+                        <NavItem
+                            icon={ArchiveRestore}
+                            label="Restore Data"
+                            onPress={handleRestore}
+                        />
+                        <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
+                        <NavItem
+                            icon={Share2}
+                            label="Share Config"
+                            onPress={handleShareConfig}
+                        />
+                        <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
+                        <NavItem
+                            icon={Settings2}
+                            label="Import Config"
+                            onPress={handleImportConfig}
+                        />
+                    </Card>
                 </View>
 
-                <Text style={styles.sectionHeader}>About</Text>
-                <View style={styles.sectionCard}>
-                    <SettingItem icon={Info} label="Version" value="1.0.2" type="text" />
-                    <View style={styles.itemSeparator} />
-                    <Text style={styles.versionText}>Designed for financial discipline.</Text>
+                <View style={styles.section}>
+                    <Text variant="label" color="textSecondary" style={styles.sectionHeader}>Data Management</Text>
+                    <Card style={styles.sectionCard}>
+                        <NavItem 
+                            icon={Trash2} 
+                            label="Clear Transaction History" 
+                            color={theme.colors.error}
+                            type="destructive"
+                            onPress={handleClearData}
+                        />
+                        <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
+                        <NavItem 
+                            icon={Database} 
+                            label="Reset ALL System Data" 
+                            color={theme.colors.error}
+                            type="destructive"
+                            onPress={handleResetApp}
+                        />
+                    </Card>
                 </View>
 
+                <View style={styles.section}>
+                    <Text variant="label" color="textSecondary" style={styles.sectionHeader}>Information</Text>
+                    <Card style={styles.sectionCard}>
+                        <NavItem icon={Info} label="Version" value="1.0.0" type="text" onPress={() => {}} />
+                    </Card>
+                </View>
+
+                <View style={styles.footer}>
+                    <Text variant="caption" color="textSecondary" style={styles.footerText}>
+                         Nkyekyɛmu • Powered by Hisho
+                    </Text>
+                </View>
             </ScrollView>
         </View>
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any, mode: string) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: theme.colors.background,
     },
     content: {
         padding: theme.spacing.lg,
-        paddingBottom: 100,
+    },
+    header: {
+        marginBottom: theme.spacing.xxl,
     },
     title: {
-        fontSize: theme.typography.size.sm,
-        color: theme.colors.textSecondary,
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-        marginBottom: theme.spacing.sm,
+        letterSpacing: -1.5,
+        marginBottom: 2,
+    },
+    section: {
+        marginBottom: theme.spacing.xl,
     },
     sectionHeader: {
-        fontSize: theme.typography.size.xs,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.textSecondary,
-        textTransform: 'uppercase',
-        letterSpacing: 2,
         marginBottom: theme.spacing.sm,
-        marginTop: theme.spacing.xl,
+        paddingHorizontal: theme.spacing.xs,
     },
     sectionCard: {
-        borderWidth: 1,
-        borderRadius: theme.roundness.md,
+        padding: 0,
         overflow: 'hidden',
     },
-    settingItem: {
+    navItem: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: theme.spacing.md,
     },
-    settingLeft: {
+    navLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+    },
+    navRight: {
         flexDirection: 'row',
         alignItems: 'center',
     },
     iconBox: {
-        width: 32,
-        height: 32,
-        borderRadius: 8,
-        backgroundColor: theme.colors.gray.light,
+        width: 36,
+        height: 36,
+        borderRadius: 10,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: theme.spacing.md,
     },
-    settingLabel: {
-        fontSize: theme.typography.size.md,
-        color: theme.colors.text,
-        fontWeight: theme.typography.weight.medium as any,
-    },
-    itemSeparator: {
-        height: 1,
-        backgroundColor: theme.colors.border,
-        marginLeft: theme.spacing.xl + 24,
-    },
-    rulesEditorContainer: {
-        marginTop: theme.spacing.md,
-        paddingLeft: theme.spacing.sm,
-    },
-    headerRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: theme.spacing.md,
-    },
-    sectionTitle: {
-        fontSize: theme.typography.size.sm,
-        fontWeight: theme.typography.weight.bold as any,
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-    },
-    total: {
-        fontSize: theme.typography.size.sm,
-        fontWeight: theme.typography.weight.bold as any,
-    },
-    totalError: {
-        color: '#FF0000',
-    },
-    categoryBlock: {
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        borderRadius: theme.roundness.md,
-        padding: theme.spacing.md,
-        marginBottom: theme.spacing.md,
-    },
-    catRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: theme.spacing.sm,
+    navLabel: {
+        fontFamily: theme.typography.fontFamily.medium,
     },
     nameInput: {
         flex: 1,
+        fontFamily: theme.typography.fontFamily.medium,
         fontSize: theme.typography.size.md,
-        fontWeight: theme.typography.weight.bold as any,
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border,
-        paddingVertical: 4,
-        marginRight: theme.spacing.md,
+        padding: 0,
     },
-    subNameInput: {
-        fontWeight: theme.typography.weight.regular as any,
-        fontSize: theme.typography.size.sm,
+    saveAction: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
     },
-    percentageWrapper: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border,
-        width: 60,
-        marginRight: theme.spacing.sm,
-    },
-    percentageInput: {
-        flex: 1,
-        textAlign: 'right',
-        fontSize: theme.typography.size.md,
-        paddingVertical: 4,
-    },
-    deleteBtn: {
-        padding: 6,
-    },
-    optionsRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginTop: 4,
-        marginBottom: theme.spacing.sm,
-    },
-    option: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    optionLabel: {
-        fontSize: 10,
-        color: theme.colors.textSecondary,
-        marginRight: theme.spacing.sm,
-    },
-    addSubBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: theme.colors.gray.light,
-        paddingHorizontal: theme.spacing.sm,
-        paddingVertical: 4,
-        borderRadius: theme.roundness.sm,
-    },
-    addSubText: {
-        fontSize: 10,
-        marginLeft: 4,
-    },
-    subCatRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: theme.spacing.sm,
-        paddingLeft: theme.spacing.md,
-    },
-    indent: {
-        width: 15,
+    separator: {
         height: 1,
-        backgroundColor: theme.colors.border,
-        marginRight: theme.spacing.sm,
+        marginLeft: 64,
     },
-    subTotalRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+    footer: {
+        marginTop: theme.spacing.xxl,
         alignItems: 'center',
-        marginTop: theme.spacing.xs,
     },
-    subTotal: {
-        fontSize: 10,
-        fontWeight: 'bold',
-        color: theme.colors.textSecondary,
-    },
-    othersHint: {
-        fontSize: 10,
-        marginTop: 2,
-    },
-    subOthersHint: {
-        fontSize: 10,
-        color: theme.colors.gray.medium,
-        fontStyle: 'italic',
-    },
-    addMainBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderStyle: 'dashed',
-        borderColor: theme.colors.black,
-        padding: theme.spacing.sm,
-        borderRadius: theme.roundness.md,
-        marginBottom: theme.spacing.md,
-    },
-    addMainText: {
-        marginLeft: theme.spacing.sm,
-        fontWeight: theme.typography.weight.bold as any,
-    },
-    saveRulesBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: theme.spacing.md,
-        borderRadius: theme.roundness.md,
-        marginBottom: theme.spacing.md,
-    },
-    saveRulesBtnText: {
-        fontSize: theme.typography.size.md,
-        fontWeight: theme.typography.weight.bold as any,
-        marginLeft: theme.spacing.sm,
-    },
-    versionText: {
-        fontSize: 10,
-        color: theme.colors.textSecondary,
-        padding: theme.spacing.md,
-        textAlign: 'center',
+    footerText: {
+        opacity: 0.5,
     },
 });

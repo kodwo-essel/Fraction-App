@@ -1,9 +1,10 @@
-import { Trash2, TrendingDown, TrendingUp } from 'lucide-react-native';
+import { ArrowDownRight, ArrowUpRight, Trash2 } from 'lucide-react-native';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { theme } from '../constants/theme';
-import { formatCurrency } from '../services/allocation';
+import { StyleSheet, View } from 'react-native';
+import { useApp } from '../context/AppContext';
+import { formatCompact } from '../services/allocation';
 import { PressableScale } from './PressableScale';
+import { Text } from './Themed';
 
 interface TransactionItemProps {
     id: string;
@@ -28,64 +29,71 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
     onDelete,
     groupId
 }) => {
+    const { currencyCode, theme, themeMode } = useApp();
     const isIncome = type === 'income';
+    const styles = getStyles(theme, themeMode);
 
     return (
-        <View style={[styles.container, { borderBottomColor: theme.colors.border }]}>
-            <View style={[styles.iconContainer, { backgroundColor: theme.colors.gray.light }]}>
+        <View style={styles.container}>
+            <View style={styles.iconContainer}>
                 {isIncome ? (
-                    <TrendingUp size={20} color={theme.colors.text} />
+                    <ArrowUpRight size={18} color={theme.colors.success} />
                 ) : (
-                    <TrendingDown size={20} color={theme.colors.gray.medium} />
+                    <ArrowDownRight size={18} color={theme.colors.error} />
                 )}
             </View>
             <View style={styles.content}>
                 <View style={styles.header}>
                     <View style={styles.mainInfo}>
-                        <Text style={[styles.name, { color: theme.colors.text }]}>{name}</Text>
-                        <Text style={[styles.category, { color: theme.colors.textSecondary }]}>{categoryName}</Text>
+                        <Text variant="body" style={styles.name}>{name}</Text>
+                        <Text variant="caption" color="textSecondary" style={styles.category}>{categoryName}</Text>
                     </View>
                     <View style={styles.rightContent}>
-                        <Text style={[
-                            styles.amount,
-                            { color: theme.colors.text },
-                            !isIncome && [styles.amountExpense, { color: theme.colors.textSecondary }]
-                        ]}>
-                            {isIncome ? '+' : '-'}{formatCurrency(amount)}
+                        <Text
+                            variant="h3"
+                            style={[styles.amount, { color: isIncome ? theme.colors.success : theme.colors.error }]}
+                        >
+                            {isIncome ? '+' : '-'}{formatCompact(amount, currencyCode)}
                         </Text>
                         {onDelete && (
                             <PressableScale
                                 style={styles.deleteButton}
                                 onPress={() => onDelete(id, groupId)}
                             >
-                                <Trash2 size={16} color={theme.colors.gray.medium} />
+                                <Trash2 size={16} color={theme.colors.text} />
                             </PressableScale>
                         )}
                     </View>
                 </View>
-                {description ? <Text style={[styles.description, { color: theme.colors.textSecondary }]}>{description}</Text> : null}
-                <Text style={[styles.date, { color: theme.colors.textSecondary }]}>
-                    {new Date(date).toLocaleDateString()} • {new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {description ? (
+                    <Text variant="caption" color="textSecondary" style={styles.description}>
+                        {description}
+                    </Text>
+                ) : null}
+                <Text variant="caption" color="textSecondary" style={styles.date}>
+                    {new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} • {new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </Text>
             </View>
         </View>
     );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any, mode: string) => StyleSheet.create({
     container: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: theme.spacing.md,
+        paddingVertical: theme.spacing.lg,
         borderBottomWidth: 1,
+        borderBottomColor: theme.colors.border,
     },
     iconContainer: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 44,
+        height: 44,
+        borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: theme.spacing.md,
+        backgroundColor: mode === 'light' ? 'rgba(0,0,0,0.03)' : 'rgba(255, 255, 255, 0.05)',
     },
     content: {
         flex: 1,
@@ -100,21 +108,14 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     name: {
-        fontSize: theme.typography.size.md,
-        fontWeight: theme.typography.weight.bold as any,
+        fontFamily: theme.typography.fontFamily.medium,
     },
     category: {
-        fontSize: theme.typography.size.xs,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
+        marginTop: 1,
     },
     amount: {
-        fontSize: theme.typography.size.md,
-        fontWeight: theme.typography.weight.bold as any,
         marginLeft: theme.spacing.sm,
-    },
-    amountExpense: {
-        fontWeight: theme.typography.weight.regular as any,
+        letterSpacing: -0.5,
     },
     rightContent: {
         flexDirection: 'row',
@@ -123,13 +124,15 @@ const styles = StyleSheet.create({
     deleteButton: {
         marginLeft: theme.spacing.md,
         padding: theme.spacing.xs,
+        opacity: 0.6,
     },
     description: {
-        fontSize: theme.typography.size.sm,
-        marginTop: 2,
+        marginTop: 4,
         marginBottom: 4,
+        fontStyle: 'italic',
     },
     date: {
-        fontSize: theme.typography.size.xs,
+        marginTop: 2,
+        opacity: 0.8,
     },
 });

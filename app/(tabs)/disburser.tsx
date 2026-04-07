@@ -1,23 +1,32 @@
 import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CategoryRow } from '../../components/CategoryRow';
 import { EntryTransition } from '../../components/EntryTransition';
 import { PressableScale } from '../../components/PressableScale';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
-import { theme } from '../../constants/theme';
+import { Button, Card, Text } from '../../components/Themed';
+import CURRENCIES from '../../constants/currencies.json';
+import { useAlert } from '../../context/AlertContext';
 import { useApp } from '../../context/AppContext';
-import { calculateAllocation, formatCurrency } from '../../services/allocation';
+import { calculateAllocation, formatCompact, formatCurrency } from '../../services/allocation';
 
 export default function Disburser() {
     const [amount, setAmount] = useState('');
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [step, setStep] = useState<'input' | 'preview'>('input');
-    const { categories, addIncome, isLoading } = useApp();
+    const { categories, addIncome, isLoading, currencyCode, theme, themeMode } = useApp();
+    const { showAlert } = useAlert();
     const insets = useSafeAreaInsets();
 
+    const styles = getStyles(theme, themeMode);
     const incomeAmount = parseFloat(amount) || 0;
+
+    const activeCurrency = React.useMemo(() =>
+        CURRENCIES.find(c => c.code === currencyCode) || CURRENCIES.find(c => c.code === 'GHS') || CURRENCIES[0]
+        , [currencyCode]);
+
     const allocation = React.useMemo(() => calculateAllocation(incomeAmount, categories), [incomeAmount, categories]);
 
     if (isLoading) {
@@ -37,11 +46,11 @@ export default function Disburser() {
 
     const handleNext = () => {
         if (incomeAmount <= 0) {
-            Alert.alert('Invalid Amount', 'Please enter a valid income amount.');
+            showAlert({ title: 'Invalid Amount', message: 'Please enter a valid income amount.' });
             return;
         }
         if (!name.trim()) {
-            Alert.alert('Name Required', 'Please enter a name for this allocation.');
+            showAlert({ title: 'Name Required', message: 'Please enter a name for this allocation.' });
             return;
         }
         setStep('preview');
@@ -54,14 +63,14 @@ export default function Disburser() {
             setName('');
             setDescription('');
             setStep('input');
-            Alert.alert('Success', 'Income allocated successfully.');
+            showAlert({ title: 'Success', message: 'Income allocated successfully.' });
         } catch (error) {
-            Alert.alert('Error', 'Failed to allocate income.');
+            showAlert({ title: 'Error', message: 'Failed to allocate income.' });
         }
     };
 
     return (
-        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={styles.container}>
             <ScrollView
                 contentContainerStyle={[
                     styles.content,
@@ -69,50 +78,82 @@ export default function Disburser() {
                 ]}
             >
                 <EntryTransition delay={100}>
-                    <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Allocation Name</Text>
-                    <TextInput
-                        style={[styles.nameInput, { color: theme.colors.text, borderBottomColor: theme.colors.border }]}
-                        placeholder="e.g. Feb Salary"
-                        placeholderTextColor={theme.colors.gray.medium}
-                        value={name}
-                        onChangeText={setName}
-                        editable={step === 'input'}
-                    />
+                    <Card style={styles.inputCard}>
+                        <Text variant="label" style={styles.label}>Allocation Details</Text>
 
-                    <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Description (Optional)</Text>
-                    <TextInput
-                        style={[styles.descInput, { color: theme.colors.text, borderBottomColor: theme.colors.border }]}
-                        placeholder="Add details..."
-                        placeholderTextColor={theme.colors.gray.medium}
-                        value={description}
-                        onChangeText={setDescription}
-                        editable={step === 'input'}
-                        multiline
-                    />
+                        <TextInput
+                            style={[styles.nameInput, { color: theme.colors.text, borderBottomColor: theme.colors.border }]}
+                            placeholder="Allocation Name (e.g. Feb Salary)"
+                            placeholderTextColor={theme.colors.textSecondary}
+                            value={name}
+                            onChangeText={setName}
+                            editable={step === 'input'}
+                            selectionColor={theme.colors.primary}
+                        />
 
-                    <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Income Amount</Text>
-                    <TextInput
-                        style={[styles.input, { color: theme.colors.text, borderBottomColor: theme.colors.text }]}
-                        placeholder="0.00"
-                        placeholderTextColor={theme.colors.gray.medium}
-                        keyboardType="numeric"
-                        value={amount}
-                        onChangeText={setAmount}
-                        editable={step === 'input'}
-                    />
+                        <TextInput
+                            style={[styles.descInput, { color: theme.colors.text }]}
+                            placeholder="Optional Details..."
+                            placeholderTextColor={theme.colors.textSecondary}
+                            value={description}
+                            onChangeText={setDescription}
+                            editable={step === 'input'}
+                            multiline
+                            selectionColor={theme.colors.primary}
+                        />
+
+                        <View style={[styles.amountContainer, { borderBottomColor: incomeAmount > 0 ? theme.colors.success : theme.colors.border }]}>
+                            <View style={[
+                                styles.currencySymbolBox,
+                                activeCurrency.symbol.length > 2 && { minWidth: 60, paddingHorizontal: 8 }
+                            ]}>
+                                <Text
+                                    numberOfLines={1}
+                                    style={[
+                                        styles.symbolText,
+                                        { fontSize: 24, lineHeight: 24, transform: [{ translateY: 2 }], color: incomeAmount > 0 ? theme.colors.success : theme.colors.primary },
+                                        activeCurrency.symbol.length === 2 && { fontSize: 22, lineHeight: 22 },
+                                        activeCurrency.symbol.length === 3 && { fontSize: 20, lineHeight: 20 },
+                                        activeCurrency.symbol.length > 3 && { fontSize: 16, lineHeight: 16 }
+                                    ]}
+                                >
+                                    {activeCurrency.symbol}
+                                </Text>
+                            </View>
+                            <TextInput
+                                style={[styles.input, { color: incomeAmount > 0 ? theme.colors.success : theme.colors.text }]}
+                                placeholder="0.00"
+                                placeholderTextColor={theme.colors.border}
+                                keyboardType="numeric"
+                                value={amount}
+                                onChangeText={setAmount}
+                                editable={step === 'input'}
+                                selectionColor={theme.colors.success}
+                            />
+                        </View>
+                    </Card>
                 </EntryTransition>
 
                 {step === 'preview' ? (
                     <EntryTransition delay={200}>
-                        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Preview Allocation</Text>
-                        <View style={[styles.previewCard, { borderColor: theme.colors.border }]}>
-                            {allocation.map(item => (
+                        <View style={styles.sectionHeader}>
+                            <Text variant="label">Preview Distribution</Text>
+                        </View>
+                        <Card
+                            gradient
+                            gradientColors={themeMode === 'light' ? ['rgba(0,0,0,0.02)', 'rgba(0,0,0,0.05)'] : ['rgba(255, 255, 255, 0.05)', 'rgba(0, 0, 0, 0.1)']}
+                            style={styles.previewCard}
+                        >
+                            {allocation.map((item, idx) => (
                                 <React.Fragment key={item.categoryId}>
                                     <CategoryRow
                                         name={item.name}
                                         percentage={item.percentage}
-                                        onPress={() => { }} // dummy to show it's clickable-ish or just styled
-                                        rightElement={<Text style={[styles.amountText, { color: theme.colors.text }]}>{formatCurrency(item.amount)}</Text>}
+                                        rightElement={
+                                            <Text variant="h3" style={[styles.amountText, { color: theme.colors.success }]}>
+                                                {formatCompact(item.amount, currencyCode)}
+                                            </Text>
+                                        }
                                     />
                                     {item.subAllocations?.map(sub => (
                                         <CategoryRow
@@ -120,121 +161,123 @@ export default function Disburser() {
                                             name={sub.name}
                                             percentage={sub.percentage}
                                             level={1}
-                                            onPress={() => { }}
-                                            rightElement={<Text style={[styles.subAmountText, { color: theme.colors.textSecondary }]}>{formatCurrency(sub.amount)}</Text>}
+                                            rightElement={
+                                                <Text variant="caption" color="textSecondary">
+                                                    {formatCompact(sub.amount, currencyCode)}
+                                                </Text>
+                                            }
                                         />
                                     ))}
                                 </React.Fragment>
                             ))}
-                        </View>
+                        </Card>
 
-                        <PressableScale
-                            style={[styles.button, { backgroundColor: theme.colors.text }]}
+                        <Button
+                            title="Confirm & Disburse"
+                            variant="primary"
                             onPress={handleConfirm}
-                        >
-                            <Text style={[styles.buttonText, { color: theme.colors.background }]}>Confirm & Save</Text>
-                        </PressableScale>
+                            style={styles.button}
+                        />
 
                         <PressableScale
                             style={styles.backButton}
                             onPress={() => setStep('input')}
                         >
-                            <Text style={[styles.backButtonText, { color: theme.colors.textSecondary }]}>Edit Amount</Text>
+                            <Text variant="label" color="textSecondary">Edit Amount</Text>
                         </PressableScale>
                     </EntryTransition>
-                ) : null}
-
-                {step === 'input' ? (
+                ) : (
                     <EntryTransition delay={200}>
-                        <PressableScale
-                            style={[
-                                styles.button,
-                                { backgroundColor: theme.colors.text },
-                                incomeAmount <= 0 ? [styles.buttonDisabled, { backgroundColor: theme.colors.gray.medium }] : undefined
-                            ]}
+                        <Button
+                            title="Preview Allocation"
+                            variant="primary"
                             onPress={handleNext}
                             disabled={incomeAmount <= 0}
-                        >
-                            <Text style={[styles.buttonText, { color: theme.colors.background }]}>Preview Allocation</Text>
-                        </PressableScale>
+                            style={[
+                                styles.button,
+                                incomeAmount <= 0 && { opacity: 0.5 }
+                            ]}
+                        />
                     </EntryTransition>
-                ) : null}
+                )}
             </ScrollView>
         </View>
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any, mode: string) => StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: theme.colors.background,
     },
     content: {
         padding: theme.spacing.lg,
     },
+    inputCard: {
+        marginBottom: theme.spacing.xl,
+        padding: theme.spacing.xl,
+    },
     label: {
-        fontSize: theme.typography.size.sm,
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-        marginBottom: theme.spacing.sm,
+        marginBottom: theme.spacing.md,
     },
     nameInput: {
+        fontFamily: theme.typography.fontFamily.medium,
         fontSize: theme.typography.size.lg,
-        fontWeight: theme.typography.weight.medium as any,
         borderBottomWidth: 1,
-        paddingBottom: theme.spacing.xs,
+        paddingBottom: theme.spacing.sm,
         marginBottom: theme.spacing.lg,
     },
     descInput: {
+        fontFamily: theme.typography.fontFamily.regular,
         fontSize: theme.typography.size.sm,
-        borderBottomWidth: 1,
-        paddingBottom: theme.spacing.xs,
-        marginBottom: theme.spacing.lg,
+        marginBottom: theme.spacing.xl,
         minHeight: 40,
     },
-    input: {
-        fontSize: 48,
-        fontWeight: theme.typography.weight.bold as any,
-        borderBottomWidth: 2,
-        paddingBottom: theme.spacing.sm,
-        marginBottom: theme.spacing.xl,
+    amountContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderBottomWidth: 1,
+        paddingBottom: theme.spacing.md,
+        gap: theme.spacing.md,
     },
-    sectionTitle: {
-        fontSize: theme.typography.size.sm,
-        fontWeight: theme.typography.weight.bold as any,
-        textTransform: 'uppercase',
-        letterSpacing: 1.5,
+    currencySymbolBox: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        backgroundColor: mode === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    symbolText: {
+        fontFamily: theme.typography.fontFamily.bold,
+        includeFontPadding: false,
+        textAlignVertical: 'center',
+    },
+    input: {
+        flex: 1,
+        fontFamily: theme.typography.fontFamily.bold,
+        fontSize: 48,
+        marginLeft: theme.spacing.xs,
+        letterSpacing: -2,
+    },
+    sectionHeader: {
         marginBottom: theme.spacing.md,
+        paddingHorizontal: theme.spacing.xs,
     },
     previewCard: {
-        borderWidth: 1,
-        borderRadius: theme.roundness.md,
+        padding: 0,
         overflow: 'hidden',
         marginBottom: theme.spacing.xxl,
     },
     amountText: {
-        fontSize: theme.typography.size.md,
-        fontWeight: theme.typography.weight.bold as any,
-    },
-    subAmountText: {
-        fontSize: theme.typography.size.sm,
+        letterSpacing: -0.5,
     },
     button: {
-        padding: theme.spacing.lg,
-        alignItems: 'center',
-        borderRadius: theme.roundness.md,
-    },
-    buttonDisabled: {
-    },
-    buttonText: {
-        fontSize: theme.typography.size.md,
-        fontWeight: theme.typography.weight.bold as any,
+        marginTop: theme.spacing.md,
     },
     backButton: {
         padding: theme.spacing.md,
         alignItems: 'center',
         marginTop: theme.spacing.sm,
-    },
-    backButtonText: {
-        fontSize: theme.typography.size.sm,
     },
 });

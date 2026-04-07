@@ -1,15 +1,22 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
-import { theme } from '../constants/theme';
-import { PressableScale } from './PressableScale';
+import { Image, StyleSheet, View } from 'react-native';
+import { useApp } from '../context/AppContext';
+import { Text, Card, Button } from './Themed';
 
 interface LockScreenProps {
     onAuthenticate: () => void;
 }
 
 export const LockScreen: React.FC<LockScreenProps> = ({ onAuthenticate }) => {
+    const { theme, themeMode } = useApp();
+    const styles = getStyles(theme);
+
     return (
-        <View style={styles.container}>
+        <Card 
+            gradient 
+            gradientColors={themeMode === 'light' ? ['rgba(0,0,0,0.05)', 'rgba(255, 255, 255, 0.85)'] : ['rgba(255, 255, 255, 0.1)', 'rgba(0, 0, 0, 0.85)']}
+            style={styles.container}
+        >
             <View style={styles.content}>
                 <View style={styles.logoContainer}>
                     <Image
@@ -18,18 +25,23 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onAuthenticate }) => {
                         resizeMode="contain"
                     />
                 </View>
-                <Text style={styles.title}>Fraction</Text>
-                <Text style={styles.subtitle}>Authentication required to view your financial records.</Text>
+                <Text variant="h1" style={styles.title}>Fraction</Text>
+                <Text variant="body" color="textSecondary" style={styles.subtitle}>
+                    Authentication required to view your financial records.
+                </Text>
 
-                <PressableScale style={styles.button} onPress={onAuthenticate}>
-                    <Text style={styles.buttonText}>Unlock App</Text>
-                </PressableScale>
+                <Button
+                    title="Unlock Ledger"
+                    variant="primary"
+                    onPress={onAuthenticate}
+                    style={styles.button}
+                />
             </View>
-        </View>
+        </Card>
     );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: theme.colors.background,
@@ -44,7 +56,7 @@ const styles = StyleSheet.create({
     logoContainer: {
         width: 120,
         height: 120,
-        backgroundColor: theme.colors.gray.light,
+        backgroundColor: theme.colors.surface,
         borderRadius: 24,
         alignItems: 'center',
         justifyContent: 'center',
@@ -57,7 +69,7 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: theme.typography.size.xxl,
-        fontWeight: theme.typography.weight.bold as any,
+        fontFamily: theme.typography.fontFamily.bold,
         color: theme.colors.text,
         marginBottom: theme.spacing.xs,
         letterSpacing: -1,
@@ -71,16 +83,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: theme.spacing.xl,
     },
     button: {
-        backgroundColor: theme.colors.text,
-        paddingVertical: theme.spacing.md,
-        paddingHorizontal: theme.spacing.xxl,
-        borderRadius: theme.roundness.md,
-        width: '100%',
-        alignItems: 'center',
-    },
-    buttonText: {
-        color: theme.colors.background,
-        fontWeight: theme.typography.weight.bold as any,
-        fontSize: theme.typography.size.md,
+        marginTop: theme.spacing.md,
     },
 });

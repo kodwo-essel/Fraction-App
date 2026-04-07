@@ -6,7 +6,7 @@ import Animated, {
     withSpring,
     withTiming
 } from 'react-native-reanimated';
-import { theme } from '../constants/theme';
+import { useApp } from '../context/AppContext';
 
 interface PressableScaleProps extends PressableProps {
     style?: StyleProp<ViewStyle>;
@@ -24,6 +24,8 @@ export const PressableScale: React.FC<PressableScaleProps> = ({
     onPressOut,
     ...props
 }) => {
+    const { theme } = useApp();
+    const styles = getStyles(theme);
     const flattenedStyle = StyleSheet.flatten(style);
     const baseColor = (flattenedStyle?.backgroundColor as string) || theme.colors.background;
 
@@ -32,7 +34,7 @@ export const PressableScale: React.FC<PressableScaleProps> = ({
 
     React.useEffect(() => {
         backgroundColor.value = baseColor;
-    }, [baseColor]);
+    }, [baseColor, theme]);
 
     const animatedStyle = useAnimatedStyle(() => ({
         transform: [{ scale: scale.value }],
@@ -40,20 +42,21 @@ export const PressableScale: React.FC<PressableScaleProps> = ({
     }));
 
     const handlePressIn = (event: any) => {
-        scale.value = withSpring(0.97, { damping: 10, stiffness: 200 });
-        // Use theme.colors.pressed by default. 
-        // If it's a primary button (text color in B&W theme), flash to a slightly different gray
-        let pressedColor = theme.colors.pressed;
-        if (baseColor === theme.colors.text) {
-            pressedColor = theme.colors.gray.dark;
+        scale.value = withSpring(1.02, { damping: 12, stiffness: 200 });
+        
+        let pressedColor = 'rgba(255, 255, 255, 0.15)';
+        if (baseColor === theme.colors.primary || baseColor === theme.colors.text) {
+          pressedColor = theme.colors.zinc[200];
+        } else if (baseColor === theme.colors.background) {
+          pressedColor = theme.colors.surfaceElevated;
         }
-
+        
         backgroundColor.value = withTiming(pressedColor, { duration: 100 });
         onPressIn?.(event);
     };
 
     const handlePressOut = (event: any) => {
-        scale.value = withSpring(1, { damping: 10, stiffness: 200 });
+        scale.value = withSpring(1, { damping: 12, stiffness: 200 });
         backgroundColor.value = withTiming(baseColor, { duration: 150 });
         onPressOut?.(event);
     };
@@ -70,7 +73,7 @@ export const PressableScale: React.FC<PressableScaleProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     base: {
         borderRadius: theme.roundness.md,
         overflow: 'hidden',

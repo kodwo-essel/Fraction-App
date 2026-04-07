@@ -76,9 +76,33 @@ export const validatePercentages = (categories: Category[], parentId: string | n
     return group.every(c => validatePercentages(categories, c.id));
 };
 
-export const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-    }).format(amount);
+export const formatCurrency = (amount: number, currencyCode: string = 'GHS'): string => {
+    try {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: currencyCode,
+        }).format(amount);
+    } catch (e) {
+        // Fallback for invalid codes
+        return `${currencyCode} ${amount.toFixed(2)}`;
+    }
+};
+
+export const formatCompact = (amount: number, currencyCode: string = 'GHS'): string => {
+    const abs = Math.abs(amount);
+    const sign = amount < 0 ? '-' : '';
+
+    if (abs < 1_000) return formatCurrency(amount, currencyCode);
+
+    // Extract the currency symbol using Intl so it adapts to any currency
+    let symbol = currencyCode;
+    try {
+        const parts = new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode }).formatToParts(0);
+        const currencyPart = parts.find(p => p.type === 'currency');
+        if (currencyPart) symbol = currencyPart.value;
+    } catch { /* use code as fallback */ }
+
+    if (abs >= 1_000_000_000) return `${sign}${symbol}${(abs / 1_000_000_000).toFixed(1)}b`;
+    if (abs >= 1_000_000)     return `${sign}${symbol}${(abs / 1_000_000).toFixed(1)}m`;
+    return `${sign}${symbol}${(abs / 1_000).toFixed(1)}k`;
 };

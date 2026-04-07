@@ -1,31 +1,36 @@
 import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CategoryRow } from '../../components/CategoryRow';
 import { EntryTransition } from '../../components/EntryTransition';
-import { PressableScale } from '../../components/PressableScale';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
-import { theme } from '../../constants/theme';
+import { Button, Card, Text } from '../../components/Themed';
+import CURRENCIES from '../../constants/currencies.json';
+import { useAlert } from '../../context/AlertContext';
 import { useApp } from '../../context/AppContext';
-import { formatCurrency } from '../../services/allocation';
+import { formatCompact, formatCurrency } from '../../services/allocation';
 
 export default function Expense() {
     const [amount, setAmount] = useState('');
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [selectedId, setSelectedId] = useState<string | null>(null);
-    const { categories, addExpense, getCategoryBalance, isLoading } = useApp();
+    const { categories, addExpense, getCategoryBalance, isLoading, currencyCode, theme, themeMode } = useApp();
+    const { showAlert } = useAlert();
     const insets = useSafeAreaInsets();
 
+    const styles = getStyles(theme, themeMode);
     const expenseAmount = parseFloat(amount) || 0;
 
-    // Can only log expenses to non-protected categories
-    // If a category has subcategories, must choose subcategory
+    const activeCurrency = React.useMemo(() =>
+        CURRENCIES.find(c => c.code === currencyCode) || CURRENCIES.find(c => c.code === 'GHS') || CURRENCIES[0]
+        , [currencyCode]);
+
     const selectableCategories = React.useMemo(() => {
         return categories.filter(c => {
             if (c.is_protected) return false;
             const hasSubs = categories.some(sub => sub.parent_id === c.id);
-            if (hasSubs && c.type === 'main') return false; // Must pick sub
+            if (hasSubs && c.type === 'main') return false;
             return true;
         });
     }, [categories]);
@@ -45,15 +50,15 @@ export default function Expense() {
 
     const handleSave = async () => {
         if (expenseAmount <= 0) {
-            Alert.alert('Invalid Amount', 'Please enter a valid expense amount.');
+            showAlert({ title: 'Invalid Amount', message: 'Please enter a valid expense amount.' });
             return;
         }
         if (!name.trim()) {
-            Alert.alert('Name Required', 'Please enter a name for this expense.');
+            showAlert({ title: 'Name Required', message: 'Please enter a name for this expense.' });
             return;
         }
         if (!selectedId) {
-            Alert.alert('Category Required', 'Please select a category for this expense.');
+            showAlert({ title: 'Category Required', message: 'Please select a category for this expense.' });
             return;
         }
 
@@ -63,14 +68,14 @@ export default function Expense() {
             setName('');
             setDescription('');
             setSelectedId(null);
-            Alert.alert('Success', 'Expense logged successfully.');
+            showAlert({ title: 'Success', message: 'Expense logged successfully.' });
         } catch (error) {
-            Alert.alert('Error', 'Failed to log expense.');
+            showAlert({ title: 'Error', message: 'Failed to log expense.' });
         }
     };
 
     return (
-        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={styles.container}>
             <ScrollView
                 contentContainerStyle={[
                     styles.content,
@@ -78,39 +83,64 @@ export default function Expense() {
                 ]}
             >
                 <EntryTransition delay={100}>
-                    <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Expense Name</Text>
-                    <TextInput
-                        style={[styles.nameInput, { color: theme.colors.text, borderBottomColor: theme.colors.border }]}
-                        placeholder="e.g. Grocery"
-                        placeholderTextColor={theme.colors.gray.medium}
-                        value={name}
-                        onChangeText={setName}
-                    />
+                    <Card style={styles.inputCard}>
+                        <Text variant="label" style={styles.label}>Log Expense</Text>
 
-                    <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Description (Optional)</Text>
-                    <TextInput
-                        style={[styles.descInput, { color: theme.colors.text, borderBottomColor: theme.colors.border }]}
-                        placeholder="Add details..."
-                        placeholderTextColor={theme.colors.gray.medium}
-                        value={description}
-                        onChangeText={setDescription}
-                        multiline
-                    />
+                        <TextInput
+                            style={[styles.nameInput, { color: theme.colors.text, borderBottomColor: theme.colors.border }]}
+                            placeholder="Expense Name (e.g. Uber)"
+                            placeholderTextColor={theme.colors.textSecondary}
+                            value={name}
+                            onChangeText={setName}
+                            selectionColor={theme.colors.primary}
+                        />
 
-                    <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Expense Amount</Text>
-                    <TextInput
-                        style={[styles.input, { color: theme.colors.text, borderBottomColor: theme.colors.text }]}
-                        placeholder="0.00"
-                        placeholderTextColor={theme.colors.gray.medium}
-                        keyboardType="numeric"
-                        value={amount}
-                        onChangeText={setAmount}
-                    />
+                        <TextInput
+                            style={[styles.descInput, { color: theme.colors.text }]}
+                            placeholder="Optional Details..."
+                            placeholderTextColor={theme.colors.textSecondary}
+                            value={description}
+                            onChangeText={setDescription}
+                            multiline
+                            selectionColor={theme.colors.primary}
+                        />
+
+                        <View style={[styles.amountContainer, { borderBottomColor: expenseAmount > 0 ? theme.colors.error : theme.colors.border }]}>
+                            <View style={[
+                                styles.currencySymbolBox,
+                                activeCurrency.symbol.length > 2 && { minWidth: 60, paddingHorizontal: 8 }
+                            ]}>
+                                <Text
+                                    numberOfLines={1}
+                                    style={[
+                                        styles.symbolText,
+                                        { fontSize: 24, lineHeight: 24, transform: [{ translateY: 2 }], color: expenseAmount > 0 ? theme.colors.error : theme.colors.primary },
+                                        activeCurrency.symbol.length === 2 && { fontSize: 22, lineHeight: 22 },
+                                        activeCurrency.symbol.length === 3 && { fontSize: 20, lineHeight: 20 },
+                                        activeCurrency.symbol.length > 3 && { fontSize: 16, lineHeight: 16 }
+                                    ]}
+                                >
+                                    {activeCurrency.symbol}
+                                </Text>
+                            </View>
+                            <TextInput
+                                style={[styles.input, { color: expenseAmount > 0 ? theme.colors.error : theme.colors.text }]}
+                                placeholder="0.00"
+                                placeholderTextColor={theme.colors.border}
+                                keyboardType="numeric"
+                                value={amount}
+                                onChangeText={setAmount}
+                                selectionColor={theme.colors.error}
+                            />
+                        </View>
+                    </Card>
                 </EntryTransition>
 
                 <EntryTransition delay={200}>
-                    <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Select Category</Text>
-                    <View style={[styles.listContainer, { borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}>
+                    <View style={styles.sectionHeader}>
+                        <Text variant="label">Select Destination</Text>
+                    </View>
+                    <Card style={styles.listCard}>
                         {selectableCategories.map(cat => (
                             <CategoryRow
                                 key={cat.id}
@@ -120,81 +150,97 @@ export default function Expense() {
                                 onPress={() => setSelectedId(cat.id)}
                                 rightElement={
                                     <View style={styles.right}>
-                                        <Text style={[styles.balance, { color: theme.colors.textSecondary }]}>{formatCurrency(getCategoryBalance(cat.id))}</Text>
+                                        <Text variant="caption" color="textSecondary" style={styles.balance}>{formatCompact(getCategoryBalance(cat.id), currencyCode)}</Text>
                                         <View style={[
                                             styles.radio,
-                                            { borderColor: theme.colors.text },
-                                            selectedId === cat.id && [styles.radioSelected, { backgroundColor: theme.colors.text }]
+                                            { borderColor: theme.colors.border },
+                                            selectedId === cat.id && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }
                                         ]} />
                                     </View>
                                 }
                             />
                         ))}
-                    </View>
+                    </Card>
                 </EntryTransition>
 
                 <EntryTransition delay={300}>
-                    <PressableScale
-                        style={[
-                            styles.button,
-                            { backgroundColor: theme.colors.text },
-                            (!selectedId || expenseAmount <= 0) ? [styles.buttonDisabled, { backgroundColor: theme.colors.gray.medium }] : undefined
-                        ]}
+                    <Button
+                        title="Record Transaction"
+                        variant="primary"
                         onPress={handleSave}
                         disabled={!selectedId || expenseAmount <= 0}
-                    >
-                        <Text style={[styles.buttonText, { color: theme.colors.background }]}>Save Expense</Text>
-                    </PressableScale>
+                        style={[
+                            styles.button,
+                            (!selectedId || expenseAmount <= 0) && { opacity: 0.5 }
+                        ]}
+                    />
                 </EntryTransition>
             </ScrollView>
         </View>
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any, mode: string) => StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: theme.colors.background,
     },
     content: {
         padding: theme.spacing.lg,
     },
+    inputCard: {
+        marginBottom: theme.spacing.xl,
+        padding: theme.spacing.xl,
+    },
     label: {
-        fontSize: theme.typography.size.sm,
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-        marginBottom: theme.spacing.sm,
+        marginBottom: theme.spacing.md,
     },
     nameInput: {
+        fontFamily: theme.typography.fontFamily.medium,
         fontSize: theme.typography.size.lg,
-        fontWeight: theme.typography.weight.medium as any,
         borderBottomWidth: 1,
-        paddingBottom: theme.spacing.xs,
+        paddingBottom: theme.spacing.sm,
         marginBottom: theme.spacing.lg,
     },
     descInput: {
+        fontFamily: theme.typography.fontFamily.regular,
         fontSize: theme.typography.size.sm,
-        borderBottomWidth: 1,
-        paddingBottom: theme.spacing.xs,
-        marginBottom: theme.spacing.lg,
+        marginBottom: theme.spacing.xl,
         minHeight: 40,
     },
+    amountContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderBottomWidth: 1,
+        paddingBottom: theme.spacing.md,
+        gap: theme.spacing.md,
+    },
+    currencySymbolBox: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        backgroundColor: mode === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    symbolText: {
+        fontFamily: theme.typography.fontFamily.bold,
+        includeFontPadding: false,
+        textAlignVertical: 'center',
+    },
     input: {
+        flex: 1,
+        fontFamily: theme.typography.fontFamily.bold,
         fontSize: 48,
-        fontWeight: theme.typography.weight.bold as any,
-        borderBottomWidth: 2,
-        paddingBottom: theme.spacing.sm,
-        marginBottom: theme.spacing.xl,
+        marginLeft: theme.spacing.xs,
+        letterSpacing: -2,
     },
-    sectionTitle: {
-        fontSize: theme.typography.size.sm,
-        fontWeight: theme.typography.weight.bold as any,
-        textTransform: 'uppercase',
-        letterSpacing: 1.5,
+    sectionHeader: {
         marginBottom: theme.spacing.md,
+        paddingHorizontal: theme.spacing.xs,
     },
-    listContainer: {
-        borderWidth: 1,
-        borderRadius: theme.roundness.md,
+    listCard: {
+        padding: 0,
         overflow: 'hidden',
         marginBottom: theme.spacing.xxl,
     },
@@ -203,26 +249,15 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     balance: {
-        fontSize: theme.typography.size.xs,
         marginRight: theme.spacing.sm,
     },
     radio: {
-        width: 18,
-        height: 18,
-        borderRadius: 9,
+        width: 20,
+        height: 20,
+        borderRadius: 10,
         borderWidth: 2,
     },
-    radioSelected: {
-    },
     button: {
-        padding: theme.spacing.lg,
-        alignItems: 'center',
-        borderRadius: theme.roundness.md,
-    },
-    buttonDisabled: {
-    },
-    buttonText: {
-        fontSize: theme.typography.size.md,
-        fontWeight: theme.typography.weight.bold as any,
+        marginTop: theme.spacing.md,
     },
 });

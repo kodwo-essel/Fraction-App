@@ -1,8 +1,9 @@
 import { ChevronRight, Lock } from 'lucide-react-native';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { theme } from '../constants/theme';
+import { StyleSheet, View } from 'react-native';
+import { useApp } from '../context/AppContext';
 import { PressableScale } from './PressableScale';
+import { Text } from './Themed';
 
 interface CategoryRowProps {
     name: string;
@@ -21,31 +22,33 @@ export const CategoryRow: React.FC<CategoryRowProps> = ({
     rightElement,
     level = 0
 }) => {
+    const { theme, themeMode } = useApp();
+    const styles = getStyles(theme, themeMode);
+
     return (
         <PressableScale
             onPress={onPress}
             disabled={!onPress}
             style={[
                 styles.container,
-                { borderBottomColor: theme.colors.border },
-                level > 0 ? [styles.containerSub, { backgroundColor: theme.colors.gray.light, borderBottomColor: theme.colors.background }] : undefined
+                level > 0 && styles.containerSub
             ]}
         >
             <View style={styles.left}>
                 {level > 0 ? <View style={[styles.indent, { backgroundColor: theme.colors.border }]} /> : null}
-                <Text style={[
-                    styles.name,
-                    { color: theme.colors.text },
-                    level > 0 ? [styles.nameSub, { color: theme.colors.textSecondary }] : undefined
-                ]}>
+                <Text 
+                    variant={level > 0 ? 'body' : 'h3'} 
+                    color={level > 0 ? 'textSecondary' : 'text'}
+                    style={styles.name}
+                >
                     {name}
                 </Text>
-                {isProtected ? <Lock size={14} color={theme.colors.gray.medium} style={styles.icon} /> : null}
+                {isProtected ? <Lock size={12} color={theme.colors.textSecondary} style={styles.icon} /> : null}
             </View>
             <View style={styles.right}>
                 {rightElement ? rightElement : (
                     <View style={styles.percentageContainer}>
-                        <Text style={[styles.percentage, { color: theme.colors.textSecondary }]}>{percentage}%</Text>
+                        <Text variant="body" color="textSecondary" style={styles.percentage}>{percentage}%</Text>
                         {onPress ? <ChevronRight size={18} color={theme.colors.border} /> : null}
                     </View>
                 )}
@@ -54,7 +57,7 @@ export const CategoryRow: React.FC<CategoryRowProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any, mode: string) => StyleSheet.create({
     container: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -62,27 +65,26 @@ const styles = StyleSheet.create({
         paddingVertical: theme.spacing.md,
         paddingHorizontal: theme.spacing.md,
         borderBottomWidth: 1,
+        borderBottomColor: theme.colors.border,
     },
     containerSub: {
+        backgroundColor: mode === 'light' ? 'rgba(0, 0, 0, 0.02)' : 'rgba(255, 255, 255, 0.02)',
     },
     left: {
         flexDirection: 'row',
         alignItems: 'center',
     },
     indent: {
-        width: 20,
+        width: 16,
         height: 1,
         marginRight: theme.spacing.sm,
     },
     name: {
         fontSize: theme.typography.size.md,
-        fontWeight: theme.typography.weight.medium as any,
-    },
-    nameSub: {
-        fontSize: theme.typography.size.sm,
     },
     icon: {
         marginLeft: theme.spacing.xs,
+        opacity: 0.6,
     },
     right: {
         flexDirection: 'row',
@@ -93,7 +95,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     percentage: {
-        fontSize: theme.typography.size.md,
         marginRight: theme.spacing.xs,
     },
 });

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Animated, StyleSheet, ViewStyle } from 'react-native';
-import { theme } from '../constants/theme';
+import { useApp } from '../context/AppContext';
 
 interface SkeletonLoaderProps {
     width?: number | string;
@@ -12,9 +12,10 @@ interface SkeletonLoaderProps {
 export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
     width = '100%',
     height = 20,
-    borderRadius = theme.roundness.sm,
+    borderRadius,
     style
 }) => {
+    const { theme } = useApp();
     const opacity = new Animated.Value(0.3);
 
     useEffect(() => {
@@ -41,9 +42,9 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
                 {
                     width: width as any,
                     height: height as any,
-                    borderRadius,
+                    borderRadius: borderRadius ?? theme.roundness.sm,
                     opacity,
-                    backgroundColor: theme.colors.gray.light
+                    backgroundColor: theme.colors.surfaceElevated
                 },
                 style
             ]}

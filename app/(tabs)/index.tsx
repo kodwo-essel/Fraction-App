@@ -1,196 +1,150 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BalanceCard } from '../../components/BalanceCard';
 import { CategoryRow } from '../../components/CategoryRow';
-import { ComparisonBarChart } from '../../components/ComparisonBarChart';
 import { EntryTransition } from '../../components/EntryTransition';
 import { PressableScale } from '../../components/PressableScale';
 import { SimplePieChart } from '../../components/SimplePieChart';
-import { SkeletonLoader } from '../../components/SkeletonLoader';
-import { theme } from '../../constants/theme';
+import { Button, Card, Text } from '../../components/Themed';
 import { useApp } from '../../context/AppContext';
+import { formatCompact, formatCurrency } from '../../services/allocation';
 
 export default function Dashboard() {
-  const { categories, transactions, getCategoryBalance, isLoading, userName } = useApp();
+  const { categories, transactions, getCategoryBalance, isLoading, userName, currencyCode, theme, themeMode } = useApp();
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const totalIncome = React.useMemo(() => {
-    const uniqueGroups = transactions
-      .filter(t => t.type === 'income')
-      .reduce((acc, t) => {
-        acc[t.group_id] = t.total_amount;
-        return acc;
-      }, {} as Record<string, number>);
-    return Object.values(uniqueGroups).reduce((acc, val) => acc + val, 0);
-  }, [transactions]);
+  const styles = getStyles(theme);
 
-  if (isLoading) {
-    return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <ScrollView
-          contentContainerStyle={[
-            styles.content,
-            { paddingTop: insets.top + theme.spacing.lg, paddingBottom: insets.bottom + 80 }
-          ]}
-        >
-          <SkeletonLoader height={40} width={150} style={{ marginBottom: 30 }} />
-          <SkeletonLoader height={160} style={{ marginBottom: 20 }} borderRadius={theme.roundness.md} />
-          <View style={styles.statsRow}>
-            <SkeletonLoader height={80} style={{ flex: 0.48 }} borderRadius={theme.roundness.md} />
-            <SkeletonLoader height={80} style={{ flex: 0.48 }} borderRadius={theme.roundness.md} />
-          </View>
-          <SkeletonLoader height={200} style={{ marginTop: 40 }} borderRadius={theme.roundness.md} />
-        </ScrollView>
-      </View>
-    );
-  }
-
-  const totalExpenses = transactions
-    .filter(t => t.type === 'expense')
-    .reduce((acc, t) => acc + t.amount, 0);
-
-  const totalBalance = totalIncome - totalExpenses;
+  const totalBalance = categories.reduce((sum, cat) => sum + getCategoryBalance(cat.id), 0);
+  const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+  const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
 
   const mainCategories = categories.filter(c => c.type === 'main');
-  // True only when there are user-defined (non-protected) main categories
-  const hasUserCategories = mainCategories.some(c => !c.is_protected);
 
-  // Data for Comparison Bar Chart (Income vs Expense)
-  const comparisonData = mainCategories.map(c => {
-    // For Income, we sum up leaf nodes within this main category's branch
-    // Since we now only record leaf nodes, this filter is safe.
-    // To be super safe against old data, we sum amount only for leaf categories.
-    const catIn = transactions
-      .filter(t => {
-        const isSelf = t.category_id === c.id;
-        const isChild = categories.find(sub => sub.id === t.category_id)?.parent_id === c.id;
-        const hasChildren = categories.some(sub => sub.parent_id === t.category_id);
-        return t.type === 'income' && (isSelf || isChild) && !hasChildren;
-      })
-      .reduce((acc, t) => acc + t.amount, 0);
+  const CHART_PALETTE = themeMode === 'light'
+    ? [theme.colors.black, theme.colors.zinc[700], theme.colors.zinc[500], theme.colors.zinc[300], theme.colors.zinc[100]]
+    : [theme.colors.white, theme.colors.zinc[300], theme.colors.zinc[500], theme.colors.zinc[700], theme.colors.zinc[900]];
 
-    const catOut = transactions
-      .filter(t => {
-        const isSelf = t.category_id === c.id;
-        const isChild = categories.find(sub => sub.id === t.category_id)?.parent_id === c.id;
-        return t.type === 'expense' && (isSelf || isChild);
-      })
-      .reduce((acc, t) => acc + t.amount, 0);
+  const pieData = mainCategories
+    .map((cat, idx) => ({
+      label: cat.name,
+      value: getCategoryBalance(cat.id),
+      color: CHART_PALETTE[idx % CHART_PALETTE.length],
+    }))
+    .filter(d => d.value > 0);
 
-    return {
-      label: c.name.substring(0, 4),
-      income: catIn,
-      expense: catOut
-    };
-  });
+  const hasRules = categories.some(c => c.type === 'main' && c.id !== 'system_others');
 
-  // Data for Pie Chart — only show when user has set up real categories
-  const pieData = hasUserCategories
-    ? mainCategories.map((c, i) => {
-      const colors = [theme.colors.black, theme.colors.gray.dark, theme.colors.gray.medium, theme.colors.gray.light, theme.colors.border];
-      return {
-        label: c.name,
-        value: c.percentage,
-        color: colors[i % colors.length]
-      };
-    })
-    : [];
+  if (isLoading) return null;
+
+  const profileIconUrl = `https://img.icons8.com/?size=100&id=7819&format=png&color=${themeMode === 'light' ? '000000' : 'ffffff'}`;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={styles.container}>
       <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          { paddingTop: insets.top + theme.spacing.lg, paddingBottom: insets.bottom + 80 }
-        ]}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + theme.spacing.lg, paddingBottom: insets.bottom + 120 }]}
+        showsVerticalScrollIndicator={false}
       >
-        <EntryTransition delay={100}>
+        <EntryTransition delay={0}>
           <View style={styles.header}>
             <View>
-              <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>Welcome back,</Text>
-              <Text style={[styles.brand, { color: theme.colors.text }]}>{userName || 'User'}</Text>
+              <Text variant="h1" style={styles.brand}>Fraction</Text>
+              <Text variant="label" color="textSecondary">
+                Analysis for {userName || 'User'}
+              </Text>
             </View>
-            <Image
-              source={require('../../assets/images/icon.png')}
-              style={styles.headerLogo}
-              resizeMode="contain"
+            <PressableScale onPress={() => router.push('/settings')}>
+              <Image
+                source={{ uri: profileIconUrl }}
+                style={styles.profileIcon}
+              />
+            </PressableScale>
+          </View>
+        </EntryTransition>
+
+        <EntryTransition delay={100}>
+          <Card style={styles.balanceCard}>
+            <Text variant="label" color="textSecondary" style={styles.balanceLabel}>Total Available</Text>
+            <Text variant="h1" style={styles.balanceAmount}>{formatCompact(totalBalance, currencyCode)}</Text>
+          </Card>
+        </EntryTransition>
+
+        <EntryTransition delay={150}>
+          <View style={styles.actionContainer}>
+            <Button
+              title="Expense"
+              variant="primary"
+              onPress={() => router.push('/expense')}
+              style={styles.actionBtn}
+            />
+            <Button
+              title="Allocate"
+              variant="secondary"
+              onPress={() => router.push('/disburser')}
+              style={styles.actionBtn}
             />
           </View>
         </EntryTransition>
 
         <EntryTransition delay={200}>
-          <BalanceCard
-            label="Total Balance"
-            amount={totalBalance}
-            large
-          />
-        </EntryTransition>
-
-        <EntryTransition delay={300}>
           <View style={styles.statsRow}>
-            <View style={[styles.statBox, { borderColor: theme.colors.border }]}>
-              <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Total Income</Text>
-              <Text style={[styles.statValue, { color: theme.colors.text }]}>+${totalIncome.toFixed(0)}</Text>
-            </View>
-            <View style={[styles.statBox, { borderColor: theme.colors.border }]}>
-              <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Total Expenses</Text>
-              <Text style={[styles.statValue, { color: theme.colors.text }]}>-${totalExpenses.toFixed(0)}</Text>
-            </View>
+            <Card style={styles.statBox}>
+              <Text variant="label" color="textSecondary" style={styles.statLabel}>Income</Text>
+              <Text variant="h3" color="success" style={styles.statValue}>+{formatCompact(totalIncome, currencyCode)}</Text>
+            </Card>
+            <Card style={styles.statBox}>
+              <Text variant="label" color="textSecondary" style={styles.statLabel}>Expenses</Text>
+              <Text variant="h3" color="error" style={styles.statValue}>-{formatCompact(totalExpenses, currencyCode)}</Text>
+            </Card>
           </View>
         </EntryTransition>
 
+        <EntryTransition delay={300}>
+          <View style={styles.sectionHeader}>
+            <Text variant="label" color="textSecondary">Distribution</Text>
+          </View>
+          <Card style={styles.chartCard}>
+            <SimplePieChart data={pieData} />
+            <Button
+              title={hasRules ? "Edit Rules" : "Configure Rules"}
+              variant="primary"
+              onPress={() => router.push('/configuration')}
+              style={styles.configBtn}
+            />
+          </Card>
+        </EntryTransition>
+
         <EntryTransition delay={400}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Rules Distribution</Text>
-          <SimplePieChart data={pieData} />
-        </EntryTransition>
-
-        <EntryTransition delay={500}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Income vs Expenses</Text>
-          <ComparisonBarChart data={comparisonData} />
-        </EntryTransition>
-
-        <EntryTransition delay={600}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Categories</Text>
-          {!hasUserCategories ? (
-            <View style={styles.emptyCategories}>
-              <Ionicons name="albums-outline" size={40} color={theme.colors.gray.medium} />
-              <Text style={[styles.emptyCatTitle, { color: theme.colors.text }]}>No Categories Yet</Text>
-              <Text style={[styles.emptyCatSubtitle, { color: theme.colors.textSecondary }]}>
-                Set up budget rules to track where your money goes.
-              </Text>
-              <PressableScale
-                style={[styles.ctaButton, { backgroundColor: theme.colors.text }]}
-                onPress={() => router.push('/(tabs)/settings')}
-              >
-                <Text style={[styles.ctaButtonText, { color: theme.colors.background }]}>Set Up Categories</Text>
-              </PressableScale>
-            </View>
-          ) : (
-            <View style={[styles.listContainer, { borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}>
-              {mainCategories.map((cat) => (
-                <CategoryRow
-                  key={cat.id}
-                  name={cat.name}
-                  percentage={cat.percentage}
-                  isProtected={cat.is_protected}
-                  rightElement={<Text style={[styles.catBalance, { color: theme.colors.text }]}>${getCategoryBalance(cat.id).toFixed(0)}</Text>}
-                />
-              ))}
-            </View>
-          )}
+          <View style={styles.sectionHeader}>
+            <Text variant="label" color="textSecondary">Rules & Category Balances</Text>
+          </View>
+          <Card style={styles.categoriesCard}>
+            {mainCategories.map((cat, idx) => (
+              <CategoryRow
+                key={cat.id}
+                name={cat.name}
+                percentage={cat.percentage}
+                isProtected={cat.is_protected}
+                rightElement={
+                  <Text variant="h3" style={styles.catBalance}>
+                    {formatCompact(getCategoryBalance(cat.id), currencyCode)}
+                  </Text>
+                }
+              />
+            ))}
+          </Card>
         </EntryTransition>
       </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: theme.colors.background,
   },
   content: {
     padding: theme.spacing.lg,
@@ -201,83 +155,66 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: theme.spacing.xl,
   },
-  greeting: {
-    fontSize: theme.typography.size.sm,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
   brand: {
-    fontSize: theme.typography.size.xxl,
-    fontWeight: theme.typography.weight.bold as any,
-    letterSpacing: -1,
+    letterSpacing: -1.5,
   },
-  headerLogo: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: theme.colors.gray.light,
+  profileIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  balanceCard: {
+    padding: theme.spacing.xl,
+    marginBottom: theme.spacing.lg,
+    alignItems: 'center',
+  },
+  balanceLabel: {
+    marginBottom: theme.spacing.xs,
+  },
+  balanceAmount: {
+    fontSize: 42,
+    letterSpacing: -2,
+  },
+  actionContainer: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+    marginBottom: theme.spacing.xl,
+  },
+  actionBtn: {
+    flex: 1,
   },
   statsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.lg,
+    gap: theme.spacing.md,
+    marginBottom: theme.spacing.xl,
   },
   statBox: {
-    flex: 0.48,
-    borderWidth: 1,
+    flex: 1,
     padding: theme.spacing.md,
-    borderRadius: theme.roundness.md,
   },
   statLabel: {
-    fontSize: 10,
-    textTransform: 'uppercase',
     marginBottom: 4,
   },
   statValue: {
-    fontSize: theme.typography.size.md,
-    fontWeight: theme.typography.weight.bold as any,
+    letterSpacing: -0.5,
   },
-  sectionTitle: {
-    fontSize: theme.typography.size.sm,
-    fontWeight: theme.typography.weight.bold as any,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    marginTop: theme.spacing.xl,
+  sectionHeader: {
     marginBottom: theme.spacing.md,
+    paddingHorizontal: theme.spacing.xs,
   },
-  listContainer: {
-    borderWidth: 1,
-    borderRadius: theme.roundness.md,
+  configBtn: {
+    marginTop: theme.spacing.lg,
+  },
+  chartCard: {
+    marginBottom: theme.spacing.xl,
+    paddingVertical: theme.spacing.xl,
+    alignItems: 'center',
+  },
+  categoriesCard: {
+    padding: 0,
     overflow: 'hidden',
   },
   catBalance: {
-    fontSize: theme.typography.size.md,
-    fontWeight: theme.typography.weight.medium as any,
-  },
-  emptyCategories: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.xxl,
-    gap: theme.spacing.sm,
-  },
-  emptyCatTitle: {
-    fontSize: theme.typography.size.md,
-    fontWeight: theme.typography.weight.bold as any,
-    marginTop: theme.spacing.xs,
-  },
-  emptyCatSubtitle: {
-    fontSize: theme.typography.size.sm,
-    textAlign: 'center',
-    maxWidth: 240,
-    lineHeight: 20,
-  },
-  ctaButton: {
-    marginTop: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.roundness.md,
-  },
-  ctaButtonText: {
-    fontSize: theme.typography.size.sm,
-    fontWeight: theme.typography.weight.bold as any,
+    letterSpacing: -0.5,
   },
 });

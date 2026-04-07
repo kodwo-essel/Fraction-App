@@ -2,28 +2,54 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { theme } from '../constants/theme';
-import { AppProvider } from '../context/AppContext';
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
-import { useState } from 'react';
+
+import { AppProvider, useApp } from '../context/AppContext';
 import { LockScreen } from '../components/LockScreen';
 import { SetupScreen } from '../components/SetupScreen';
+import { AlertProvider } from '../context/AlertContext';
 
 SplashScreen.preventAutoHideAsync();
 
-function RootLayoutContent() {
-  const [isLocked, setIsLocked] = useState(false);
-  const [isChecking, setIsChecking] = useState(true);
+export default function RootLayout() {
+  const [loaded, error] = useFonts({
+    'Chillax-Bold': require('../assets/fonts/Chillax_Complete/Fonts/OTF/Chillax-Bold.otf'),
+    'Chillax-Medium': require('../assets/fonts/Chillax_Complete/Fonts/OTF/Chillax-Medium.otf'),
+    'Chillax-Regular': require('../assets/fonts/Chillax_Complete/Fonts/OTF/Chillax-Regular.otf'),
+  });
 
   useEffect(() => {
-    checkLock();
-  }, []);
+    if (loaded || error) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded, error]);
+
+  if (!loaded && !error) {
+    return null;
+  }
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <AppProvider>
+          <AlertProvider>
+            <RootLayoutInternal />
+          </AlertProvider>
+        </AppProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
+  );
+}
+
+function RootLayoutInternal() {
+  const { theme, themeMode } = useApp();
+  const [isLocked, setIsLocked] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
 
   const checkLock = async () => {
     try {
@@ -53,67 +79,47 @@ function RootLayoutContent() {
         setIsLocked(false);
       }
     } else {
-      // If hardware is not available or not enrolled but it was somehow enabled, 
-      // we might want to allow access or ask for a fallback (which we haven't implemented)
-      // For now, let's just allow access to not lock the user out permanently
       setIsLocked(false);
     }
   };
 
-  if (isChecking) return null;
+  useEffect(() => {
+    checkLock();
+  }, []);
 
-  if (isLocked) {
-    return <LockScreen onAuthenticate={authenticate} />;
+  if (isChecking) {
+    return <View style={{ flex: 1, backgroundColor: theme?.colors?.background || '#000000' }} />;
   }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack
-        screenOptions={{
-          headerShown: true,
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.text,
-          headerTitleStyle: {
-            fontWeight: theme.typography.weight.bold as any,
-          },
-          contentStyle: {
-            backgroundColor: theme.colors.background,
-          },
-        }}
-      >
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
-      <StatusBar style="dark" />
+      {isLocked ? (
+        <LockScreen onAuthenticate={authenticate} />
+      ) : (
+        <Stack
+          screenOptions={{
+            headerShown: true,
+            headerStyle: {
+              backgroundColor: theme.colors.background,
+            },
+            headerTintColor: theme.colors.text,
+            headerTitleStyle: {
+              fontFamily: theme.typography.fontFamily.bold,
+              fontSize: theme.typography.size.lg,
+            },
+            headerShadowVisible: false,
+            contentStyle: {
+              backgroundColor: theme.colors.background,
+            },
+          }}
+        >
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="configuration" options={{ headerShown: false }} />
+        </Stack>
+      )}
+      <StatusBar style={themeMode === 'light' ? 'dark' : 'light'} />
       <SetupScreen />
     </View>
-  );
-}
-
-export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    // Standard system fonts or custom ones if available
-  });
-
-  useEffect(() => {
-    if (loaded || error) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded, error]);
-
-  if (!loaded && !error) {
-    return null;
-  }
-
-  return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <AppProvider>
-          <RootLayoutContent />
-        </AppProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
   );
 }
 

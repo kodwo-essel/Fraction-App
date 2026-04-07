@@ -1,7 +1,8 @@
 import React from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, StyleSheet, Text as RNText, View } from 'react-native';
 import Svg, { Line, Rect } from 'react-native-svg';
-import { theme } from '../constants/theme';
+import { useApp } from '../context/AppContext';
+import { Text } from './Themed';
 
 interface ComparisonBarData {
     label: string;
@@ -15,40 +16,36 @@ interface ComparisonBarChartProps {
 }
 
 export const ComparisonBarChart: React.FC<ComparisonBarChartProps> = ({ data, height = 200 }) => {
+    const { theme } = useApp();
+    const styles = getStyles(theme);
     const chartWidth = Dimensions.get('window').width - 64;
     const groupWidth = (chartWidth / data.length);
     const barWidth = groupWidth * 0.35;
-    const gap = groupWidth * 0.1;
+    const gap = groupWidth * 0.08;
 
     const maxVal = Math.max(...data.flatMap(d => [d.income, d.expense]), 1);
 
     return (
-        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={styles.container}>
             <Svg width={chartWidth} height={height}>
-                {/* Y Axis */}
-                <Line
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2={height}
-                    stroke={theme.colors.border}
-                    strokeWidth="1"
-                />
-                {/* X Axis */}
-                <Line
-                    x1="0"
-                    y1={height}
-                    x2={chartWidth}
-                    y2={height}
-                    stroke={theme.colors.border}
-                    strokeWidth="2"
-                />
+                {/* Y Axis Grid Lines */}
+                {[0, 0.25, 0.5, 0.75, 1].map((p) => (
+                    <Line
+                        key={`grid-${p}`}
+                        x1="0"
+                        y1={height * (1 - p)}
+                        x2={chartWidth}
+                        y2={height * (1 - p)}
+                        stroke={theme.colors.border}
+                        strokeWidth="1"
+                        strokeDasharray="4 4"
+                    />
+                ))}
+
                 {data.map((item, index) => {
                     const incomeHeight = (item.income / maxVal) * (height - 24);
                     const expenseHeight = (item.expense / maxVal) * (height - 24);
-                    // Add a small padding from Y axis
-                    const xOffset = 16;
-                    const xStart = xOffset + index * ((chartWidth - xOffset) / data.length) + (((chartWidth - xOffset) / data.length) - (barWidth * 2 + gap)) / 2;
+                    const xStart = index * groupWidth + (groupWidth - (barWidth * 2 + gap)) / 2;
 
                     return (
                         <React.Fragment key={item.label}>
@@ -58,8 +55,8 @@ export const ComparisonBarChart: React.FC<ComparisonBarChartProps> = ({ data, he
                                 y={height - incomeHeight}
                                 width={barWidth}
                                 height={incomeHeight}
-                                fill={theme.colors.text}
-                                rx={2}
+                                fill={theme.colors.success}
+                                rx={4}
                             />
                             {/* Expense Bar */}
                             <Rect
@@ -67,35 +64,37 @@ export const ComparisonBarChart: React.FC<ComparisonBarChartProps> = ({ data, he
                                 y={height - expenseHeight}
                                 width={barWidth}
                                 height={expenseHeight}
-                                fill={theme.colors.gray.medium}
-                                rx={2}
+                                fill={theme.colors.error}
+                                rx={4}
                             />
                         </React.Fragment>
                     );
                 })}
             </Svg>
+            
             <View style={[styles.labels, { width: chartWidth }]}>
                 {data.map(item => (
-                    <Text key={item.label} style={[styles.labelText, { width: groupWidth, color: theme.colors.textSecondary }]}>
+                    <RNText key={item.label} style={[styles.labelText, { width: groupWidth, color: theme.colors.textSecondary }]}>
                         {item.label}
-                    </Text>
+                    </RNText>
                 ))}
             </View>
+            
             <View style={styles.legend}>
                 <View style={styles.legendItem}>
-                    <View style={[styles.legendColor, { backgroundColor: theme.colors.text }]} />
-                    <Text style={[styles.legendText, { color: theme.colors.textSecondary }]}>Income</Text>
+                    <View style={[styles.legendColor, { backgroundColor: theme.colors.success }]} />
+                    <Text variant="caption" color="textSecondary">Income</Text>
                 </View>
                 <View style={styles.legendItem}>
-                    <View style={[styles.legendColor, { backgroundColor: theme.colors.gray.medium }]} />
-                    <Text style={[styles.legendText, { color: theme.colors.textSecondary }]}>Expense</Text>
+                    <View style={[styles.legendColor, { backgroundColor: theme.colors.error }]} />
+                    <Text variant="caption" color="textSecondary">Expense</Text>
                 </View>
             </View>
         </View>
     );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     container: {
         padding: theme.spacing.md,
         alignItems: 'center',
@@ -107,7 +106,7 @@ const styles = StyleSheet.create({
     labelText: {
         fontSize: 10,
         textAlign: 'center',
-        textTransform: 'uppercase',
+        fontFamily: theme.typography.fontFamily.regular,
     },
     legend: {
         flexDirection: 'row',
@@ -120,11 +119,8 @@ const styles = StyleSheet.create({
         gap: theme.spacing.xs,
     },
     legendColor: {
-        width: 12,
-        height: 12,
-        borderRadius: 2,
-    },
-    legendText: {
-        fontSize: 10,
+        width: 10,
+        height: 10,
+        borderRadius: 5,
     },
 });
