@@ -8,7 +8,7 @@ import { PressableScale } from './PressableScale';
 import { Text, Button } from './Themed';
 
 export const SetupScreen: React.FC = () => {
-    const { userName, setUserName, theme, themeMode } = useApp();
+    const { userName, setUserName, theme } = useApp();
     const router = useRouter();
     const [name, setName] = useState('');
     const [isVisible, setIsVisible] = useState(false);
@@ -38,7 +38,7 @@ export const SetupScreen: React.FC = () => {
             animationType="fade"
             statusBarTranslucent
         >
-            <StatusBar style={themeMode === 'light' ? 'dark' : 'light'} />
+            <StatusBar style="dark" />
             <View style={styles.overlay}>
                 <KeyboardAvoidingView
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

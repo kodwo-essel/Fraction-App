@@ -1,0 +1,8 @@
+components/CategoryRow.tsx(25,20): error TS2339: Property 'themeMode' does not exist on type 'AppContextType'.
+components/LockScreen.tsx(11,20): error TS2339: Property 'themeMode' does not exist on type 'AppContextType'.
+components/SetupScreen.tsx(11,43): error TS2339: Property 'themeMode' does not exist on type 'AppContextType'.
+components/Themed.tsx(5,10): error TS2305: Module '"../constants/theme"' has no exported member 'darkTheme'.
+components/Themed.tsx(66,18): error TS2339: Property 'themeMode' does not exist on type 'AppContextType'.
+components/Themed.tsx(109,18): error TS2339: Property 'themeMode' does not exist on type 'AppContextType'.
+components/TransactionItem.tsx(32,34): error TS2339: Property 'themeMode' does not exist on type 'AppContextType'.
+context/AlertContext.tsx(26,18): error TS2339: Property 'themeMode' does not exist on type 'AppContextType'.

@@ -2,7 +2,7 @@ import React from 'react';
 import { Text as DefaultText, View as DefaultView, TouchableOpacity, TouchableOpacityProps, StyleSheet, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from '../context/AppContext';
-import { darkTheme } from '../constants/theme';
+import { defaultTheme } from '../constants/theme';
 
 export type TextProps = DefaultText['props'] & {
   variant?: 'h1' | 'h2' | 'h3' | 'body' | 'caption' | 'label';
@@ -63,14 +63,14 @@ export type CardProps = DefaultView['props'] & {
 
 export function Card(props: CardProps) {
   const { style, glass = true, gradient = false, gradientColors, children, ...otherProps } = props;
-  const { theme, themeMode } = useApp();
+  const { theme } = useApp();
   
   const styles = getStyles(theme);
 
   if (gradient) {
     const defaultColors: readonly [string, string, ...string[]] = [
-      themeMode === 'light' ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.08)',
-      themeMode === 'light' ? 'rgba(0, 0, 0, 0.02)' : 'rgba(255, 255, 255, 0.02)'
+      theme.colors.surface,
+      theme.colors.surfaceElevated
     ];
     return (
       <LinearGradient
@@ -106,7 +106,7 @@ export type ButtonProps = TouchableOpacityProps & {
 
 export function Button(props: ButtonProps) {
   const { style, title, variant = 'primary', ...otherProps } = props;
-  const { theme, themeMode } = useApp();
+  const { theme } = useApp();
   
   const styles = getStyles(theme);
 

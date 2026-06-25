@@ -52,59 +52,132 @@ const commonTokens = {
     },
 };
 
-export const darkTheme = {
-    ...commonTokens,
-    colors: {
-        background: palette.black,
-        surface: 'rgba(255, 255, 255, 0.05)',
-        surfaceElevated: palette.zinc[900],
-        primary: palette.white,
-        secondary: palette.zinc[800],
-        accent: palette.white,
-        text: palette.white,
-        textSecondary: palette.zinc[500],
-        border: 'rgba(255, 255, 255, 0.1)',
-        pressed: 'rgba(255, 255, 255, 0.08)',
-        error: palette.ruby,
-        success: palette.emerald,
-        white: palette.white,
-        black: palette.black,
-        gray: {
-            light: palette.zinc[200],
-            medium: palette.zinc[400],
-            dark: palette.zinc[800],
-        },
-        zinc: palette.zinc,
-    },
+export interface ThemeColors {
+    background: string;
+    surface: string;
+    surfaceElevated: string;
+    primary: string;
+    secondary: string;
+    accent: string;
+    text: string;
+    textSecondary: string;
+    border: string;
+    pressed: string;
+    error: string;
+    success: string;
+    white: string;
+    black: string;
+    zinc: typeof palette.zinc;
+}
+
+export type Theme = {
+    spacing: typeof commonTokens.spacing;
+    typography: typeof commonTokens.typography;
+    roundness: typeof commonTokens.roundness;
+    colors: ThemeColors;
 };
 
-export const lightTheme = {
-    ...commonTokens,
-    colors: {
-        background: palette.white,
-        surface: 'rgba(0, 0, 0, 0.02)',
-        surfaceElevated: palette.zinc[50],
-        primary: palette.black,
-        secondary: 'rgba(0, 0, 0, 0.05)',
-        accent: palette.black,
-        text: palette.black,
-        textSecondary: palette.zinc[400],
-        border: 'rgba(0, 0, 0, 0.05)',
-        pressed: 'rgba(0, 0, 0, 0.03)',
-        error: palette.ruby,
-        success: palette.emerald,
-        white: palette.white,
-        black: palette.black,
-        gray: {
-            light: palette.zinc[800],
-            medium: palette.zinc[500],
-            dark: palette.zinc[200],
+export const themes: Record<string, Theme> = {
+    minimalist: {
+        ...commonTokens,
+        colors: {
+            background: palette.white,
+            surface: 'rgba(0, 0, 0, 0.02)',
+            surfaceElevated: palette.zinc[50],
+            primary: palette.black,
+            secondary: 'rgba(0, 0, 0, 0.05)',
+            accent: palette.black,
+            text: palette.black,
+            textSecondary: palette.zinc[500],
+            border: 'rgba(0, 0, 0, 0.05)',
+            pressed: 'rgba(0, 0, 0, 0.03)',
+            error: palette.ruby,
+            success: palette.emerald,
+            white: palette.white,
+            black: palette.black,
+            zinc: palette.zinc,
         },
-        zinc: palette.zinc,
     },
+    ocean: {
+        ...commonTokens,
+        colors: {
+            background: '#F0F8FF', // Alice Blue
+            surface: 'rgba(0, 50, 100, 0.03)',
+            surfaceElevated: '#E6F3FF',
+            primary: '#005A9C', // Dark Blue
+            secondary: 'rgba(0, 90, 156, 0.08)',
+            accent: '#007FFF',
+            text: '#001F3F',
+            textSecondary: '#4A6572',
+            border: 'rgba(0, 90, 156, 0.1)',
+            pressed: 'rgba(0, 90, 156, 0.05)',
+            error: palette.ruby,
+            success: palette.emerald,
+            white: palette.white,
+            black: palette.black,
+            zinc: palette.zinc,
+        },
+    },
+    sunset: {
+        ...commonTokens,
+        colors: {
+            background: '#FFF8F0', // Warm off-white
+            surface: 'rgba(200, 80, 0, 0.03)',
+            surfaceElevated: '#FFEFE0',
+            primary: '#D95319', // Burnt Orange
+            secondary: 'rgba(217, 83, 25, 0.08)',
+            accent: '#FF7F50',
+            text: '#4A2511',
+            textSecondary: '#8B5A44',
+            border: 'rgba(217, 83, 25, 0.1)',
+            pressed: 'rgba(217, 83, 25, 0.05)',
+            error: palette.ruby,
+            success: palette.emerald,
+            white: palette.white,
+            black: palette.black,
+            zinc: palette.zinc,
+        },
+    },
+    forest: {
+        ...commonTokens,
+        colors: {
+            background: '#F4FAF4', // Soft Mint
+            surface: 'rgba(0, 100, 0, 0.03)',
+            surfaceElevated: '#E8F5E9',
+            primary: '#1B5E20', // Dark Green
+            secondary: 'rgba(27, 94, 32, 0.08)',
+            accent: '#2E7D32',
+            text: '#0D2B0E',
+            textSecondary: '#455A46',
+            border: 'rgba(27, 94, 32, 0.1)',
+            pressed: 'rgba(27, 94, 32, 0.05)',
+            error: palette.ruby,
+            success: palette.emerald,
+            white: palette.white,
+            black: palette.black,
+            zinc: palette.zinc,
+        },
+    },
+    lavender: {
+        ...commonTokens,
+        colors: {
+            background: '#F8F4FF', // Soft Lavender
+            surface: 'rgba(80, 0, 150, 0.03)',
+            surfaceElevated: '#F0E6FF',
+            primary: '#512DA8', // Deep Purple
+            secondary: 'rgba(81, 45, 168, 0.08)',
+            accent: '#673AB7',
+            text: '#221144',
+            textSecondary: '#5E4B82',
+            border: 'rgba(81, 45, 168, 0.1)',
+            pressed: 'rgba(81, 45, 168, 0.05)',
+            error: palette.ruby,
+            success: palette.emerald,
+            white: palette.white,
+            black: palette.black,
+            zinc: palette.zinc,
+        },
+    }
 };
 
-// Default export for legacy compatibility (falls back to dark)
-export const theme = darkTheme;
-
-export type Theme = typeof theme;
+export const defaultTheme = themes.minimalist;

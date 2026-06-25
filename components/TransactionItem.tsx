@@ -29,9 +29,9 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
     onDelete,
     groupId
 }) => {
-    const { currencyCode, theme, themeMode } = useApp();
+    const { currencyCode, theme } = useApp();
     const isIncome = type === 'income';
-    const styles = getStyles(theme, themeMode);
+    const styles = getStyles(theme);
 
     return (
         <View style={styles.container}>
@@ -78,7 +78,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
     );
 };
 
-const getStyles = (theme: any, mode: string) => StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     container: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -93,7 +93,7 @@ const getStyles = (theme: any, mode: string) => StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: theme.spacing.md,
-        backgroundColor: mode === 'light' ? 'rgba(0,0,0,0.03)' : 'rgba(255, 255, 255, 0.05)',
+        backgroundColor: theme.colors.surface,
     },
     content: {
         flex: 1,

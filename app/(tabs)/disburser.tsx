@@ -10,17 +10,18 @@ import CURRENCIES from '../../constants/currencies.json';
 import { useAlert } from '../../context/AlertContext';
 import { useApp } from '../../context/AppContext';
 import { calculateAllocation, formatCompact, formatCurrency } from '../../services/allocation';
+import { GuideMessage } from '../../components/GuideMessage';
 
 export default function Disburser() {
     const [amount, setAmount] = useState('');
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [step, setStep] = useState<'input' | 'preview'>('input');
-    const { categories, addIncome, isLoading, currencyCode, theme, themeMode } = useApp();
+    const { categories, addIncome, isLoading, currencyCode, theme } = useApp();
     const { showAlert } = useAlert();
     const insets = useSafeAreaInsets();
 
-    const styles = getStyles(theme, themeMode);
+    const styles = getStyles(theme);
     const incomeAmount = parseFloat(amount) || 0;
 
     const activeCurrency = React.useMemo(() =>
@@ -50,7 +51,7 @@ export default function Disburser() {
             return;
         }
         if (!name.trim()) {
-            showAlert({ title: 'Name Required', message: 'Please enter a name for this allocation.' });
+            showAlert({ title: 'Name Required', message: 'Please enter a name for this income.' });
             return;
         }
         setStep('preview');
@@ -63,9 +64,9 @@ export default function Disburser() {
             setName('');
             setDescription('');
             setStep('input');
-            showAlert({ title: 'Success', message: 'Income allocated successfully.' });
+            showAlert({ title: 'Success', message: 'Income distributed successfully.' });
         } catch (error) {
-            showAlert({ title: 'Error', message: 'Failed to allocate income.' });
+            showAlert({ title: 'Error', message: 'Failed to distribute income.' });
         }
     };
 
@@ -79,11 +80,11 @@ export default function Disburser() {
             >
                 <EntryTransition delay={100}>
                     <Card style={styles.inputCard}>
-                        <Text variant="label" style={styles.label}>Allocation Details</Text>
+                        <Text variant="label" style={styles.label}>Income Details</Text>
 
                         <TextInput
                             style={[styles.nameInput, { color: theme.colors.text, borderBottomColor: theme.colors.border }]}
-                            placeholder="Allocation Name (e.g. Feb Salary)"
+                            placeholder="Income Name (e.g. Feb Salary)"
                             placeholderTextColor={theme.colors.textSecondary}
                             value={name}
                             onChangeText={setName}
@@ -137,11 +138,11 @@ export default function Disburser() {
                 {step === 'preview' ? (
                     <EntryTransition delay={200}>
                         <View style={styles.sectionHeader}>
-                            <Text variant="label">Preview Distribution</Text>
+                            <Text variant="label">Preview Split</Text>
                         </View>
                         <Card
                             gradient
-                            gradientColors={themeMode === 'light' ? ['rgba(0,0,0,0.02)', 'rgba(0,0,0,0.05)'] : ['rgba(255, 255, 255, 0.05)', 'rgba(0, 0, 0, 0.1)']}
+                            gradientColors={['rgba(255, 255, 255, 0.5)', 'rgba(0, 0, 0, 0.05)']}
                             style={styles.previewCard}
                         >
                             {allocation.map((item, idx) => (
@@ -173,7 +174,7 @@ export default function Disburser() {
                         </Card>
 
                         <Button
-                            title="Confirm & Disburse"
+                            title="Confirm & Split"
                             variant="primary"
                             onPress={handleConfirm}
                             style={styles.button}
@@ -189,7 +190,7 @@ export default function Disburser() {
                 ) : (
                     <EntryTransition delay={200}>
                         <Button
-                            title="Preview Allocation"
+                            title="Preview Split"
                             variant="primary"
                             onPress={handleNext}
                             disabled={incomeAmount <= 0}
@@ -201,11 +202,13 @@ export default function Disburser() {
                     </EntryTransition>
                 )}
             </ScrollView>
+
+            <GuideMessage situation="income" />
         </View>
     );
 }
 
-const getStyles = (theme: any, mode: string) => StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: theme.colors.background,
@@ -244,7 +247,7 @@ const getStyles = (theme: any, mode: string) => StyleSheet.create({
         width: 48,
         height: 48,
         borderRadius: 12,
-        backgroundColor: mode === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)',
+        backgroundColor: theme.colors.surface,
         alignItems: 'center',
         justifyContent: 'center',
     },

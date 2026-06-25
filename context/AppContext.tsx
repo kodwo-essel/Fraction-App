@@ -4,7 +4,7 @@ import { SQLiteDatabase } from 'expo-sqlite';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { calculateAllocation, validatePercentages } from '../services/allocation';
 import { Category, initDatabase, RuleVersion, Transaction } from '../services/database';
-import { darkTheme, lightTheme, Theme } from '../constants/theme';
+import { defaultTheme, themes, Theme } from '../constants/theme';
 
 interface AppContextType {
     categories: Category[];
@@ -12,10 +12,12 @@ interface AppContextType {
     currentRule: RuleVersion | null;
     isLoading: boolean;
     userName: string | null;
-    themeMode: 'light' | 'dark';
+    avatarId: string | null;
+    themeName: string;
     theme: Theme;
     setUserName: (name: string) => Promise<void>;
-    setThemeMode: (mode: 'light' | 'dark') => Promise<void>;
+    setAvatarId: (id: string | null) => Promise<void>;
+    setThemeName: (name: string) => Promise<void>;
     addIncome: (amount: number, name: string, description?: string) => Promise<void>;
     addExpense: (categoryId: string, amount: number, name: string, description?: string) => Promise<void>;
     updateCategories: (updatedCategories: Category[]) => Promise<void>;
@@ -37,11 +39,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [currentRule, setCurrentRule] = useState<RuleVersion | null>(null);
     const [userName, setUserNameState] = useState<string | null>(null);
+    const [avatarId, setAvatarIdState] = useState<string | null>(null);
     const [currencyCode, setCurrencyCodeState] = useState<string>('GHS');
-    const [themeMode, setThemeModeState] = useState<'light' | 'dark'>('dark');
+    const [themeName, setThemeNameState] = useState<string>('minimalist');
     const [isLoading, setIsLoading] = useState(true);
 
-    const theme = themeMode === 'light' ? lightTheme : darkTheme;
+    const theme = themes[themeName] || defaultTheme;
 
     const refreshData = useCallback(async () => {
         if (!db) return;
@@ -88,16 +91,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     }
                 }
                 // Load user settings
-                const [savedName, savedCurrency, savedTheme] = await Promise.all([
+                const [savedName, savedCurrency, savedTheme, savedAvatar] = await Promise.all([
                     AsyncStorage.getItem('user_name'),
                     AsyncStorage.getItem('currency_code'),
-                    AsyncStorage.getItem('theme_mode')
+                    AsyncStorage.getItem('theme_mode'),
+                    AsyncStorage.getItem('avatar_id')
                 ]);
                 setUserNameState(savedName);
                 if (savedCurrency) setCurrencyCodeState(savedCurrency);
-                if (savedTheme === 'light' || savedTheme === 'dark') {
-                  setThemeModeState(savedTheme as 'light' | 'dark');
+                if (savedTheme && themes[savedTheme]) {
+                  setThemeNameState(savedTheme);
                 }
+                if (savedAvatar) setAvatarIdState(savedAvatar);
             } catch (error) {
                 console.error('Critical Database Error:', error);
                 // We could set an error state here and show it in the UI
@@ -113,9 +118,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await AsyncStorage.setItem('user_name', name);
     };
 
-    const setThemeMode = async (mode: 'light' | 'dark') => {
-        setThemeModeState(mode);
-        await AsyncStorage.setItem('theme_mode', mode);
+    const setThemeName = async (name: string) => {
+        setThemeNameState(name);
+        await AsyncStorage.setItem('theme_mode', name);
+    };
+
+    const setAvatarId = async (id: string | null) => {
+        setAvatarIdState(id);
+        if (id) {
+            await AsyncStorage.setItem('avatar_id', id);
+        } else {
+            await AsyncStorage.removeItem('avatar_id');
+        }
     };
 
     const setCurrencyCode = async (code: string) => {
@@ -253,9 +267,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
 
         // Clear personality and settings
-        await AsyncStorage.multiRemove(['user_name', 'biometric_enabled', 'biometrics_enabled', 'theme_mode']);
+        await AsyncStorage.multiRemove(['user_name', 'biometric_enabled', 'biometrics_enabled', 'theme_mode', 'avatar_id']);
         setUserNameState(null);
-        setThemeModeState('dark');
+        setThemeNameState('minimalist');
+        setAvatarIdState(null);
 
         await refreshData();
     };
@@ -277,12 +292,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             transactions,
             currentRule,
             userName,
+            avatarId,
             currencyCode,
-            themeMode,
+            themeName,
             theme,
             isLoading,
             setUserName,
-            setThemeMode,
+            setAvatarId,
+            setThemeName,
             setCurrencyCode,
             addIncome,
             addExpense,

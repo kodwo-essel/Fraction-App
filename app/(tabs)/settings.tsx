@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
-import { ArchiveRestore, ChevronRight, Database, HardDrive, Info, Lock, Settings2, Share2, Trash2, User } from 'lucide-react-native';
+import { ArchiveRestore, ChevronRight, Database, HardDrive, Info, Lock, Trash2, User } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Switch, TextInput, View, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
 import { useAlert } from '../../context/AlertContext';
@@ -11,10 +11,12 @@ import { EntryTransition } from '../../components/EntryTransition';
 import { PressableScale } from '../../components/PressableScale';
 import { Text, Card } from '../../components/Themed';
 import { initDatabase } from '../../services/database';
-import { createBackup, pickBackupFile, applyBackup, exportConfig, pickConfigFile, applyConfig } from '../../services/backup';
+import { createBackup, pickBackupFile, applyBackup } from '../../services/backup';
+import { AVATARS } from '../../constants/avatars';
+import { themes } from '../../constants/theme';
 
 export default function Settings() {
-    const { isLoading, clearTransactions, resetDatabase, refreshData, userName, setUserName, currencyCode, theme, themeMode, setThemeMode } = useApp();
+    const { isLoading, clearTransactions, resetDatabase, refreshData, userName, setUserName, avatarId, setAvatarId, currencyCode, theme, themeName, setThemeName } = useApp();
     const { showAlert } = useAlert();
     const insets = useSafeAreaInsets();
     const router = useRouter();
@@ -34,7 +36,7 @@ export default function Settings() {
         setTempUserName(userName || '');
     }, [userName]);
 
-    const styles = React.useMemo(() => getStyles(theme, themeMode), [theme, themeMode]);
+    const styles = React.useMemo(() => getStyles(theme), [theme]);
 
     if (isLoading) return null;
 
@@ -73,7 +75,7 @@ export default function Settings() {
     const handleClearData = () => {
         showAlert({
             title: 'Clear History',
-            message: 'This will erase all recorded transactions. Your rules and architecture will remain intact.',
+            message: 'This will erase all recorded transactions. Your categories and plan will remain intact.',
             buttons: [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -91,7 +93,7 @@ export default function Settings() {
     const handleResetApp = () => {
         showAlert({
             title: 'Reset Everything',
-            message: 'This action wipes everything: identity, rules, and history. The app will return to its original state.',
+            message: 'This action wipes everything: name, categories, and activity. The app will return to its original state.',
             buttons: [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -171,56 +173,7 @@ export default function Settings() {
         }
     };
 
-    const handleShareConfig = async () => {
-        try {
-            const db = await initDatabase();
-            await exportConfig(db);
-        } catch (e: any) {
-            showAlert({ title: 'Export Failed', message: e.message || 'Could not export configuration.' });
-        }
-    };
 
-    const handleImportConfig = async () => {
-        try {
-            const db = await initDatabase();
-
-            // Picker opens first — no alert before
-            const picked = await pickConfigFile();
-
-            if (picked.status === 'cancelled') return;
-
-            if (picked.status === 'invalid') {
-                showAlert({ title: 'Invalid File', message: picked.reason });
-                return;
-            }
-
-            const { data } = picked;
-            const ruleCount = data.categories.filter((c: any) => c.type === 'main').length;
-
-            showAlert({
-                title: 'Import Configuration',
-                message: `Found ${ruleCount} rule${ruleCount !== 1 ? 's' : ''}. This will replace your current rules. Your transactions will not be affected. Continue?`,
-                buttons: [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                        text: 'Import',
-                        style: 'default',
-                        onPress: async () => {
-                            try {
-                                await applyConfig(db, data);
-                                if (refreshData) await refreshData();
-                                showAlert({ title: 'Done', message: 'Configuration imported successfully.' });
-                            } catch (e: any) {
-                                showAlert({ title: 'Import Failed', message: e.message || 'Could not apply configuration.' });
-                            }
-                        }
-                    }
-                ]
-            });
-        } catch (e: any) {
-            showAlert({ title: 'Import Failed', message: e.message || 'Could not import configuration.' });
-        }
-    };
 
     const NavItem = ({ icon: Icon, label, value, type = 'chevron', color, onPress }: any) => {
         const iconColor = color || theme.colors.text;
@@ -228,7 +181,7 @@ export default function Settings() {
             <PressableScale onPress={onPress}>
                 <View style={styles.navItem}>
                     <View style={styles.navLeft}>
-                        <View style={[styles.iconBox, { backgroundColor: type === 'destructive' ? 'rgba(239, 68, 68, 0.1)' : (themeMode === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)') }]}>
+                        <View style={[styles.iconBox, { backgroundColor: type === 'destructive' ? 'rgba(239, 68, 68, 0.1)' : theme.colors.secondary }]}>
                             <Icon size={18} color={iconColor} />
                         </View>
                         <Text variant="body" style={[styles.navLabel, { color: iconColor }]}>{label}</Text>
@@ -262,7 +215,7 @@ export default function Settings() {
                     <Card style={styles.sectionCard}>
                         <View style={styles.navItem}>
                             <View style={styles.navLeft}>
-                                <View style={[styles.iconBox, { backgroundColor: themeMode === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)' }]}>
+                                <View style={[styles.iconBox, { backgroundColor: theme.colors.secondary }]}>
                                     <User size={18} color={theme.colors.text} />
                                 </View>
                                 <TextInput
@@ -284,23 +237,81 @@ export default function Settings() {
                 </View>
 
                 <View style={styles.section}>
-                    <Text variant="label" color="textSecondary" style={styles.sectionHeader}>Appearance</Text>
-                    <Card style={styles.sectionCard}>
-                        <View style={styles.navItem}>
-                            <View style={styles.navLeft}>
-                                <View style={[styles.iconBox, { backgroundColor: themeMode === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)' }]}>
-                                    <Lock size={18} color={theme.colors.text} />
-                                </View>
-                                <Text variant="body" style={styles.navLabel}>Dark Mode</Text>
-                            </View>
-                            <Switch
-                                value={themeMode === 'dark'}
-                                onValueChange={(val) => setThemeMode(val ? 'dark' : 'light')}
-                                trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-                                thumbColor={theme.colors.background}
-                            />
-                        </View>
+                    <Text variant="label" color="textSecondary" style={styles.sectionHeader}>Theme</Text>
+                    <Card style={[styles.sectionCard, { padding: theme.spacing.md, paddingVertical: theme.spacing.lg }]}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                            {Object.entries(themes).map(([key, t]) => {
+                                const isSelected = themeName === key;
+                                return (
+                                    <PressableScale
+                                        key={key}
+                                        onPress={() => setThemeName(key)}
+                                        style={{ alignItems: 'center', marginRight: 16 }}
+                                    >
+                                        <View style={{
+                                            width: 48,
+                                            height: 48,
+                                            borderRadius: 24,
+                                            backgroundColor: t.colors.background,
+                                            borderWidth: 3,
+                                            borderColor: isSelected ? t.colors.primary : t.colors.border,
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            marginBottom: 8,
+                                        }}>
+                                            <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: t.colors.primary }} />
+                                        </View>
+                                        <Text variant="caption" style={{ 
+                                            color: isSelected ? theme.colors.primary : theme.colors.textSecondary,
+                                            fontFamily: isSelected ? theme.typography.fontFamily.bold : theme.typography.fontFamily.medium
+                                        }}>
+                                            {key.charAt(0).toUpperCase() + key.slice(1)}
+                                        </Text>
+                                    </PressableScale>
+                                );
+                            })}
+                        </ScrollView>
                     </Card>
+                </View>
+
+                <View style={styles.section}>
+                    <Text variant="label" color="textSecondary" style={styles.sectionHeader}>Your Financial Pet</Text>
+                    <View style={{ paddingVertical: theme.spacing.md }}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                            {AVATARS.map((avatar) => {
+                                const isSelected = avatarId === avatar.id || (!avatarId && avatar.id === 'owl');
+                                return (
+                                    <PressableScale
+                                        key={avatar.id}
+                                        onPress={() => setAvatarId(avatar.id)}
+                                        style={styles.avatarOption}
+                                    >
+                                        <View style={[
+                                            styles.avatarImageContainer,
+                                            { borderColor: isSelected ? theme.colors.primary : 'transparent' }
+                                        ]}>
+                                            <Image source={avatar.image} style={styles.avatarImage} />
+                                        </View>
+                                        <Text 
+                                            variant="caption" 
+                                            style={{ 
+                                                color: isSelected ? theme.colors.primary : theme.colors.textSecondary, 
+                                                textAlign: 'center',
+                                                fontFamily: isSelected ? theme.typography.fontFamily.bold : theme.typography.fontFamily.medium
+                                            }}
+                                        >
+                                            {avatar.name}
+                                        </Text>
+                                    </PressableScale>
+                                );
+                            })}
+                        </ScrollView>
+                        {avatarId && (
+                            <Text variant="caption" color="textSecondary" style={{ marginTop: 16, textAlign: 'center', paddingHorizontal: 20 }}>
+                                {AVATARS.find(a => a.id === avatarId)?.description}
+                            </Text>
+                        )}
+                    </View>
                 </View>
 
                 <View style={styles.section}>
@@ -308,7 +319,7 @@ export default function Settings() {
                     <Card style={styles.sectionCard}>
                         <View style={styles.navItem}>
                             <View style={styles.navLeft}>
-                                <View style={[styles.iconBox, { backgroundColor: themeMode === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)' }]}>
+                                <View style={[styles.iconBox, { backgroundColor: theme.colors.secondary }]}>
                                     <Lock size={18} color={theme.colors.text} />
                                 </View>
                                 <Text variant="body" style={styles.navLabel}>Biometric Lock</Text>
@@ -328,7 +339,7 @@ export default function Settings() {
                     <Card style={styles.sectionCard}>
                         <NavItem 
                             icon={Database} 
-                            label="My Rules" 
+                            label="My Spending Plan" 
                             value={currencyCode}
                             onPress={() => router.push('/configuration')} 
                         />
@@ -349,18 +360,7 @@ export default function Settings() {
                             label="Restore Data"
                             onPress={handleRestore}
                         />
-                        <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
-                        <NavItem
-                            icon={Share2}
-                            label="Share Config"
-                            onPress={handleShareConfig}
-                        />
-                        <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
-                        <NavItem
-                            icon={Settings2}
-                            label="Import Config"
-                            onPress={handleImportConfig}
-                        />
+
                     </Card>
                 </View>
 
@@ -394,7 +394,7 @@ export default function Settings() {
 
                 <View style={styles.footer}>
                     <Text variant="caption" color="textSecondary" style={styles.footerText}>
-                         Nkyekyɛmu • Powered by Hisho
+                         Fraction
                     </Text>
                 </View>
             </ScrollView>
@@ -402,7 +402,7 @@ export default function Settings() {
     );
 }
 
-const getStyles = (theme: any, mode: string) => StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: theme.colors.background,
@@ -463,7 +463,27 @@ const getStyles = (theme: any, mode: string) => StyleSheet.create({
     saveAction: {
         paddingHorizontal: 12,
         paddingVertical: 6,
-        borderRadius: 8,
+        borderTopRightRadius: 4,
+    },
+    avatarOption: {
+        alignItems: 'center',
+        marginRight: 16,
+        width: 80,
+    },
+    avatarImageContainer: {
+        width: 68,
+        height: 68,
+        borderRadius: 34,
+        borderWidth: 3,
+        marginBottom: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    avatarImage: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        overflow: 'hidden',
     },
     separator: {
         height: 1,

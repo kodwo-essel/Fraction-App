@@ -8,13 +8,13 @@ interface LockScreenProps {
 }
 
 export const LockScreen: React.FC<LockScreenProps> = ({ onAuthenticate }) => {
-    const { theme, themeMode } = useApp();
+    const { theme } = useApp();
     const styles = getStyles(theme);
 
     return (
         <Card 
             gradient 
-            gradientColors={themeMode === 'light' ? ['rgba(0,0,0,0.05)', 'rgba(255, 255, 255, 0.85)'] : ['rgba(255, 255, 255, 0.1)', 'rgba(0, 0, 0, 0.85)']}
+            gradientColors={['rgba(255, 255, 255, 0.1)', 'rgba(0, 0, 0, 0.85)']}
             style={styles.container}
         >
             <View style={styles.content}>

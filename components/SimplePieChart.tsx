@@ -27,7 +27,7 @@ export const SimplePieChart: React.FC<SimplePieChartProps> = ({ data, size = 180
         return (
             <View style={styles.emptyContainer}>
                 <Ionicons name="pie-chart-outline" size={48} color={theme.colors.text} />
-                <Text variant="h3" style={styles.emptyTitle}>No Rules Yet</Text>
+                <Text variant="h3" style={styles.emptyTitle}>No Plan Yet</Text>
                 <Text variant="caption" color="textSecondary" style={styles.emptySubtitle}>
                     Set up budget categories in Allocation to see your distribution here.
                 </Text>
@@ -76,7 +76,7 @@ export const SimplePieChart: React.FC<SimplePieChartProps> = ({ data, size = 180
                 {data.map((item) => (
                     <View key={item.label} style={styles.legendItem}>
                         <View style={[styles.legendColor, { backgroundColor: item.color, borderColor: theme.colors.border }]} />
-                        <Text variant="caption" color="textSecondary" style={styles.legendLabel}>{item.label}</Text>
+                        <Text variant="caption" color="textSecondary" style={styles.legendLabel} numberOfLines={1}>{item.label}</Text>
                         <Text variant="caption" style={styles.legendValue}>
                             {total > 0 ? ((item.value / total) * 100).toFixed(0) : '0'}%
                         </Text>
@@ -99,6 +99,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     },
     legend: {
         gap: theme.spacing.xs,
+        flex: 1,
     },
     legendItem: {
         flexDirection: 'row',
@@ -113,6 +114,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     },
     legendLabel: {
         minWidth: 70,
+        flexShrink: 1,
     },
     legendValue: {
         fontFamily: theme.typography.fontFamily.bold,

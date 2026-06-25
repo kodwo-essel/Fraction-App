@@ -9,9 +9,10 @@ import { SimplePieChart } from '../../components/SimplePieChart';
 import { Button, Card, Text } from '../../components/Themed';
 import { useApp } from '../../context/AppContext';
 import { formatCompact, formatCurrency } from '../../services/allocation';
+import { GuideMessage } from '../../components/GuideMessage';
 
 export default function Dashboard() {
-  const { categories, transactions, getCategoryBalance, isLoading, userName, currencyCode, theme, themeMode } = useApp();
+  const { categories, transactions, getCategoryBalance, isLoading, userName, currencyCode, theme, themeName } = useApp();
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
@@ -21,16 +22,20 @@ export default function Dashboard() {
   const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
   const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
 
-  const mainCategories = categories.filter(c => c.type === 'main');
+  const mainCategories = categories.filter(c => c.type === 'main' && c.id !== 'system_others');
 
-  const CHART_PALETTE = themeMode === 'light'
-    ? [theme.colors.black, theme.colors.zinc[700], theme.colors.zinc[500], theme.colors.zinc[300], theme.colors.zinc[100]]
-    : [theme.colors.white, theme.colors.zinc[300], theme.colors.zinc[500], theme.colors.zinc[700], theme.colors.zinc[900]];
+  const CHART_PALETTE = [
+    theme.colors.primary, 
+    theme.colors.accent, 
+    theme.colors.zinc[400], 
+    theme.colors.zinc[300], 
+    theme.colors.zinc[200]
+  ];
 
   const pieData = mainCategories
     .map((cat, idx) => ({
       label: cat.name,
-      value: getCategoryBalance(cat.id),
+      value: cat.percentage,
       color: CHART_PALETTE[idx % CHART_PALETTE.length],
     }))
     .filter(d => d.value > 0);
@@ -39,7 +44,7 @@ export default function Dashboard() {
 
   if (isLoading) return null;
 
-  const profileIconUrl = `https://img.icons8.com/?size=100&id=7819&format=png&color=${themeMode === 'light' ? '000000' : 'ffffff'}`;
+  const profileIconUrl = `https://img.icons8.com/?size=100&id=7819&format=png&color=${theme.colors.primary.replace('#', '')}`;
 
   return (
     <View style={styles.container}>
@@ -80,7 +85,7 @@ export default function Dashboard() {
               style={styles.actionBtn}
             />
             <Button
-              title="Allocate"
+              title="Income"
               variant="secondary"
               onPress={() => router.push('/disburser')}
               style={styles.actionBtn}
@@ -103,12 +108,12 @@ export default function Dashboard() {
 
         <EntryTransition delay={300}>
           <View style={styles.sectionHeader}>
-            <Text variant="label" color="textSecondary">Distribution</Text>
+            <Text variant="label" color="textSecondary">Spending Plan</Text>
           </View>
           <Card style={styles.chartCard}>
             <SimplePieChart data={pieData} />
             <Button
-              title={hasRules ? "Edit Rules" : "Configure Rules"}
+              title={hasRules ? "Edit Plan" : "Setup Plan"}
               variant="primary"
               onPress={() => router.push('/configuration')}
               style={styles.configBtn}
@@ -118,7 +123,7 @@ export default function Dashboard() {
 
         <EntryTransition delay={400}>
           <View style={styles.sectionHeader}>
-            <Text variant="label" color="textSecondary">Rules & Category Balances</Text>
+            <Text variant="label" color="textSecondary">Category Balances</Text>
           </View>
           <Card style={styles.categoriesCard}>
             {mainCategories.map((cat, idx) => (
@@ -137,6 +142,8 @@ export default function Dashboard() {
           </Card>
         </EntryTransition>
       </ScrollView>
+
+      <GuideMessage situation="dashboard" />
     </View>
   );
 }

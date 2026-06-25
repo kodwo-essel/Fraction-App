@@ -13,6 +13,7 @@ import { AppProvider, useApp } from '../context/AppContext';
 import { LockScreen } from '../components/LockScreen';
 import { SetupScreen } from '../components/SetupScreen';
 import { AlertProvider } from '../context/AlertContext';
+import { CustomSplashScreen } from '../components/CustomSplashScreen';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -47,9 +48,10 @@ export default function RootLayout() {
 }
 
 function RootLayoutInternal() {
-  const { theme, themeMode } = useApp();
+  const { theme, themeName } = useApp();
   const [isLocked, setIsLocked] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
+  const [splashVisible, setSplashVisible] = useState(true);
 
   const checkLock = async () => {
     try {
@@ -87,13 +89,9 @@ function RootLayoutInternal() {
     checkLock();
   }, []);
 
-  if (isChecking) {
-    return <View style={{ flex: 1, backgroundColor: theme?.colors?.background || '#000000' }} />;
-  }
-
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {isLocked ? (
+      {!isChecking && (isLocked ? (
         <LockScreen onAuthenticate={authenticate} />
       ) : (
         <Stack
@@ -116,9 +114,10 @@ function RootLayoutInternal() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="configuration" options={{ headerShown: false }} />
         </Stack>
-      )}
-      <StatusBar style={themeMode === 'light' ? 'dark' : 'light'} />
-      <SetupScreen />
+      ))}
+      <StatusBar style="dark" />
+      {!isChecking && <SetupScreen />}
+      {splashVisible && <CustomSplashScreen onFinish={() => setSplashVisible(false)} />}
     </View>
   );
 }

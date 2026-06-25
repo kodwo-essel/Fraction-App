@@ -9,17 +9,18 @@ import CURRENCIES from '../../constants/currencies.json';
 import { useAlert } from '../../context/AlertContext';
 import { useApp } from '../../context/AppContext';
 import { formatCompact, formatCurrency } from '../../services/allocation';
+import { GuideMessage } from '../../components/GuideMessage';
 
 export default function Expense() {
     const [amount, setAmount] = useState('');
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [selectedId, setSelectedId] = useState<string | null>(null);
-    const { categories, addExpense, getCategoryBalance, isLoading, currencyCode, theme, themeMode } = useApp();
+    const { categories, addExpense, getCategoryBalance, isLoading, currencyCode, theme } = useApp();
     const { showAlert } = useAlert();
     const insets = useSafeAreaInsets();
 
-    const styles = getStyles(theme, themeMode);
+    const styles = getStyles(theme);
     const expenseAmount = parseFloat(amount) || 0;
 
     const activeCurrency = React.useMemo(() =>
@@ -176,11 +177,13 @@ export default function Expense() {
                     />
                 </EntryTransition>
             </ScrollView>
+
+            <GuideMessage situation="expense" />
         </View>
     );
 }
 
-const getStyles = (theme: any, mode: string) => StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: theme.colors.background,
@@ -219,7 +222,7 @@ const getStyles = (theme: any, mode: string) => StyleSheet.create({
         width: 48,
         height: 48,
         borderRadius: 12,
-        backgroundColor: mode === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)',
+        backgroundColor: theme.colors.surface,
         alignItems: 'center',
         justifyContent: 'center',
     },

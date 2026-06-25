@@ -22,8 +22,8 @@ export const CategoryRow: React.FC<CategoryRowProps> = ({
     rightElement,
     level = 0
 }) => {
-    const { theme, themeMode } = useApp();
-    const styles = getStyles(theme, themeMode);
+    const { theme } = useApp();
+    const styles = getStyles(theme);
 
     return (
         <PressableScale
@@ -40,6 +40,7 @@ export const CategoryRow: React.FC<CategoryRowProps> = ({
                     variant={level > 0 ? 'body' : 'h3'} 
                     color={level > 0 ? 'textSecondary' : 'text'}
                     style={styles.name}
+                    numberOfLines={1}
                 >
                     {name}
                 </Text>
@@ -57,7 +58,7 @@ export const CategoryRow: React.FC<CategoryRowProps> = ({
     );
 };
 
-const getStyles = (theme: any, mode: string) => StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     container: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -68,11 +69,13 @@ const getStyles = (theme: any, mode: string) => StyleSheet.create({
         borderBottomColor: theme.colors.border,
     },
     containerSub: {
-        backgroundColor: mode === 'light' ? 'rgba(0, 0, 0, 0.02)' : 'rgba(255, 255, 255, 0.02)',
+        backgroundColor: theme.colors.surface,
     },
     left: {
         flexDirection: 'row',
         alignItems: 'center',
+        flex: 1,
+        marginRight: theme.spacing.md,
     },
     indent: {
         width: 16,
@@ -81,6 +84,7 @@ const getStyles = (theme: any, mode: string) => StyleSheet.create({
     },
     name: {
         fontSize: theme.typography.size.md,
+        flexShrink: 1,
     },
     icon: {
         marginLeft: theme.spacing.xs,

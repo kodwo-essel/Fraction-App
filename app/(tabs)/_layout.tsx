@@ -37,14 +37,14 @@ export default function TabLayout() {
       <Tabs.Screen
         name="disburser"
         options={{
-          title: 'Allocation',
+          title: 'Income',
           tabBarIcon: ({ color }) => <Ionicons name="git-branch-outline" size={26} color={color} />,
         }}
       />
       <Tabs.Screen
         name="history"
         options={{
-          title: 'Ledger',
+          title: 'Activity',
           tabBarIcon: ({ color }) => <Ionicons name="list" size={26} color={color} />,
         }}
       />

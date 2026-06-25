@@ -10,10 +10,10 @@ import { useApp } from '../../context/AppContext';
 import { Text, Card } from '../../components/Themed';
 
 export default function History() {
-    const { transactions, categories, isLoading, deleteTransaction, theme, themeMode } = useApp();
+    const { transactions, categories, isLoading, deleteTransaction, theme } = useApp();
     const { showAlert } = useAlert();
     const insets = useSafeAreaInsets();
-    const styles = getStyles(theme, themeMode);
+    const styles = getStyles(theme);
 
     const groupedTransactions = React.useMemo(() => {
         const groups: Record<string, any> = {};
@@ -48,7 +48,7 @@ export default function History() {
     const handleDelete = (id: string, groupId?: string) => {
         showAlert({
             title: 'Delete Record',
-            message: 'This action will permanently remove this entry from your ledger.',
+            message: 'This action will permanently remove this entry from your history.',
             buttons: [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -77,7 +77,7 @@ export default function History() {
                 ListHeaderComponent={
                     <EntryTransition delay={100}>
                         <View style={styles.header}>
-                            <Text variant="h1" style={styles.title}>Ledger</Text>
+                            <Text variant="h1" style={styles.title}>Activity</Text>
                             <Card style={styles.iconContainer}>
                                 <Ionicons name="receipt-outline" size={24} color={theme.colors.text} />
                             </Card>
@@ -102,7 +102,7 @@ export default function History() {
                 ListEmptyComponent={
                     <View style={[styles.empty, { paddingTop: 100 + insets.top }]}>
                         <Ionicons name="receipt-outline" size={56} color={theme.colors.border} />
-                        <Text variant="h3" style={styles.emptyText}>Pristine Ledger</Text>
+                        <Text variant="h3" style={styles.emptyText}>No Activity Yet</Text>
                         <Text variant="caption" color="textSecondary" style={styles.emptySubtext}>
                             Your financial journey hasn't started yet. Log a transaction to see it here.
                         </Text>
@@ -113,7 +113,7 @@ export default function History() {
     );
 }
 
-const getStyles = (theme: any, mode: string) => StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: theme.colors.background,

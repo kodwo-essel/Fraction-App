@@ -30,15 +30,6 @@ export const calculateAllocation = (
                 percentage: sub.percentage,
             }));
 
-            if (subTotalUsed < 100) {
-                const subRemainder = 100 - subTotalUsed;
-                subAllocations.push({
-                    categoryId: 'system_others', // Sub-others also point here for now
-                    name: 'Others',
-                    amount: (subRemainder / 100) * mainAmount,
-                    percentage: subRemainder,
-                });
-            }
         }
 
         return {
@@ -50,15 +41,7 @@ export const calculateAllocation = (
         };
     });
 
-    if (mainTotalUsed < 100) {
-        const mainRemainder = 100 - mainTotalUsed;
-        allocations.push({
-            categoryId: 'system_others',
-            name: 'Others',
-            amount: (mainRemainder / 100) * income,
-            percentage: mainRemainder,
-        });
-    }
+
 
     return allocations;
 };
@@ -68,7 +51,7 @@ export const validatePercentages = (categories: Category[], parentId: string | n
     if (group.length === 0) return true;
 
     const total = group.reduce((sum, c) => sum + c.percentage, 0);
-    const isValid = total <= 100.001; // Allow slight float error
+    const isValid = Math.abs(total - 100) < 0.01; // Require exactly 100%
 
     if (!isValid) return false;
 
