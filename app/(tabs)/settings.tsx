@@ -1,19 +1,19 @@
-import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
-import { ArchiveRestore, ChevronRight, Database, HardDrive, Info, Lock, Trash2, User } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { ArchiveRestore, ChevronRight, Database, HardDrive, Info, Lock, Trash2, User, FileSpreadsheet } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Switch, TextInput, View, Image } from 'react-native';
+import { Image, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useApp } from '../../context/AppContext';
-import { useAlert } from '../../context/AlertContext';
 import { EntryTransition } from '../../components/EntryTransition';
 import { PressableScale } from '../../components/PressableScale';
-import { Text, Card } from '../../components/Themed';
-import { initDatabase } from '../../services/database';
-import { createBackup, pickBackupFile, applyBackup } from '../../services/backup';
+import { Card, Text } from '../../components/Themed';
 import { AVATARS } from '../../constants/avatars';
 import { themes } from '../../constants/theme';
+import { useAlert } from '../../context/AlertContext';
+import { useApp } from '../../context/AppContext';
+import { exportToExcel } from '../../services/exportData';
+import { initDatabase } from '../../services/database';
 
 export default function Settings() {
     const { isLoading, clearTransactions, resetDatabase, refreshData, userName, setUserName, avatarId, setAvatarId, currencyCode, theme, themeName, setThemeName } = useApp();
@@ -51,9 +51,9 @@ export default function Settings() {
             const isEnrolled = await LocalAuthentication.isEnrolledAsync();
 
             if (!hasHardware || !isEnrolled) {
-                showAlert({ 
-                    title: 'Not Available', 
-                    message: 'Biometric authentication is not set up on this device.' 
+                showAlert({
+                    title: 'Not Available',
+                    message: 'Biometric authentication is not set up on this device.'
                 });
                 return;
             }
@@ -108,68 +108,12 @@ export default function Settings() {
         });
     };
 
-    const handleBackup = async () => {
-        try {
-            const db = await initDatabase();
-            await createBackup(db, currencyCode, userName || '');
-        } catch (e: any) {
-            showAlert({ title: 'Backup Failed', message: e.message || 'Could not create backup.' });
-        }
-    };
-
-    const handleRestore = async () => {
-        try {
-            const db = await initDatabase();
-
-            // Step 1: open file picker FIRST — no alert before this
-            const picked = await pickBackupFile(db);
-
-            if (picked.status === 'cancelled') return;
-
-            if (picked.status === 'duplicate') {
-                showAlert({
-                    title: 'Already Applied',
-                    message: 'This backup has already been restored. No changes were made.',
-                });
-                return;
-            }
-
-            if (picked.status === 'invalid') {
-                showAlert({ title: 'Invalid File', message: picked.reason });
-                return;
-            }
-
-            // Step 2: file is valid — now show confirmation (picker is fully closed)
-            const { data } = picked;
-            const backupDate = data.backup.created_at
-                ? new Date(data.backup.created_at).toLocaleDateString()
-                : 'unknown date';
-
-            showAlert({
-                title: 'Confirm Restore',
-                message: `Backup from ${backupDate} found. This will replace your current data. Continue?`,
-                buttons: [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                        text: 'Yes',
-                        style: 'default',
-                        onPress: async () => {
-                            try {
-                                await applyBackup(db, data);
-                                if (refreshData) await refreshData();
-                                showAlert({
-                                    title: 'Restored',
-                                    message: `Your data has been restored successfully.`,
-                                });
-                            } catch (e: any) {
-                                showAlert({ title: 'Restore Failed', message: e.message || 'Could not restore backup.' });
-                            }
-                        }
-                    }
-                ]
-            });
-        } catch (e: any) {
-            showAlert({ title: 'Restore Failed', message: e.message || 'Could not restore backup.' });
+    const handleExportExcel = async () => {
+        const result = await exportToExcel(userName);
+        if (result.success) {
+            showAlert({ title: 'Export Successful', message: 'Your data has been exported to Excel.' });
+        } else {
+            showAlert({ title: 'Export Failed', message: 'There was an error exporting your data.' });
         }
     };
 
@@ -211,7 +155,7 @@ export default function Settings() {
                 </EntryTransition>
 
                 <View style={styles.section}>
-                    <Text variant="label" color="textSecondary" style={styles.sectionHeader}>User Identity</Text>
+                    <Text variant="label" color="textSecondary" style={styles.sectionHeader}>Name</Text>
                     <Card style={styles.sectionCard}>
                         <View style={styles.navItem}>
                             <View style={styles.navLeft}>
@@ -261,7 +205,7 @@ export default function Settings() {
                                         }}>
                                             <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: t.colors.primary }} />
                                         </View>
-                                        <Text variant="caption" style={{ 
+                                        <Text variant="caption" style={{
                                             color: isSelected ? theme.colors.primary : theme.colors.textSecondary,
                                             fontFamily: isSelected ? theme.typography.fontFamily.bold : theme.typography.fontFamily.medium
                                         }}>
@@ -292,10 +236,10 @@ export default function Settings() {
                                         ]}>
                                             <Image source={avatar.image} style={styles.avatarImage} />
                                         </View>
-                                        <Text 
-                                            variant="caption" 
-                                            style={{ 
-                                                color: isSelected ? theme.colors.primary : theme.colors.textSecondary, 
+                                        <Text
+                                            variant="caption"
+                                            style={{
+                                                color: isSelected ? theme.colors.primary : theme.colors.textSecondary,
                                                 textAlign: 'center',
                                                 fontFamily: isSelected ? theme.typography.fontFamily.bold : theme.typography.fontFamily.medium
                                             }}
@@ -337,47 +281,51 @@ export default function Settings() {
                 <View style={styles.section}>
                     <Text variant="label" color="textSecondary" style={styles.sectionHeader}>System Configuration</Text>
                     <Card style={styles.sectionCard}>
-                        <NavItem 
-                            icon={Database} 
-                            label="My Spending Plan" 
+                        <NavItem
+                            icon={Database}
+                            label="My Spending Plan"
                             value={currencyCode}
-                            onPress={() => router.push('/configuration')} 
+                            onPress={() => router.push('/configuration')}
                         />
                     </Card>
                 </View>
 
                 <View style={styles.section}>
-                    <Text variant="label" color="textSecondary" style={styles.sectionHeader}>Backup & Restore</Text>
+                    <Text variant="label" color="textSecondary" style={styles.sectionHeader}>Export Data</Text>
                     <Card style={styles.sectionCard}>
-                        <NavItem
-                            icon={HardDrive}
-                            label="Backup Data"
-                            onPress={handleBackup}
-                        />
-                        <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
-                        <NavItem
-                            icon={ArchiveRestore}
-                            label="Restore Data"
-                            onPress={handleRestore}
-                        />
-
+                        <PressableScale onPress={handleExportExcel}>
+                            <View style={styles.navItem}>
+                                <View style={styles.navLeft}>
+                                    <View style={[styles.iconBox, { backgroundColor: 'transparent' }]}>
+                                        <Image 
+                                            source={{ uri: 'https://img.icons8.com/color/48/microsoft-excel-2019--v1.png' }} 
+                                            style={{ width: 24, height: 24 }} 
+                                        />
+                                    </View>
+                                    <Text variant="body" style={styles.navLabel}>Export as Excel</Text>
+                                </View>
+                                <View style={styles.navRight}>
+                                    <ChevronRight size={18} color={theme.colors.textSecondary} />
+                                </View>
+                            </View>
+                        </PressableScale>
                     </Card>
                 </View>
 
                 <View style={styles.section}>
                     <Text variant="label" color="textSecondary" style={styles.sectionHeader}>Data Management</Text>
                     <Card style={styles.sectionCard}>
-                        <NavItem 
-                            icon={Trash2} 
-                            label="Clear Transaction History" 
+                        <NavItem
+                            icon={Trash2}
+                            label="Clear Transaction History"
                             color={theme.colors.error}
                             type="destructive"
                             onPress={handleClearData}
                         />
                         <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
-                        <NavItem 
-                            icon={Database} 
-                            label="Reset ALL System Data" 
+                        <NavItem
+                            icon={Database}
+                            label="Reset ALL System Data"
                             color={theme.colors.error}
                             type="destructive"
                             onPress={handleResetApp}
@@ -388,13 +336,13 @@ export default function Settings() {
                 <View style={styles.section}>
                     <Text variant="label" color="textSecondary" style={styles.sectionHeader}>Information</Text>
                     <Card style={styles.sectionCard}>
-                        <NavItem icon={Info} label="Version" value="1.0.0" type="text" onPress={() => {}} />
+                        <NavItem icon={Info} label="Version" value="1.0.0" type="text" onPress={() => { }} />
                     </Card>
                 </View>
 
                 <View style={styles.footer}>
                     <Text variant="caption" color="textSecondary" style={styles.footerText}>
-                         Fraction
+                        Fraction
                     </Text>
                 </View>
             </ScrollView>

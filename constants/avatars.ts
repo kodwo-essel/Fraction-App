@@ -20,7 +20,7 @@ export interface GuideAvatar {
 export const AVATARS: GuideAvatar[] = [
     {
         id: 'owl',
-        name: 'Ollie the Owl',
+        name: 'Ollie',
         description: 'Wise and observant, always keeping a close eye on your budget.',
         image: require('../assets/images/avatars/owl.png'),
         dialogue: (ctx) => ({
@@ -40,14 +40,14 @@ export const AVATARS: GuideAvatar[] = [
                 "A wise bird plans for the winter. Let's see your progress."
             ],
             setup: [
-                "Let's build a wise nest egg together.",
+                "Let's build a wise egg nest together.",
                 "Planning is the first step to wisdom."
             ]
         })
     },
     {
         id: 'robot',
-        name: 'Robo-Advisor',
+        name: 'Robo',
         description: 'Precise, logical, and always calculating the best route.',
         image: require('../assets/images/avatars/robot.png'),
         dialogue: (ctx) => ({
@@ -74,7 +74,7 @@ export const AVATARS: GuideAvatar[] = [
     },
     {
         id: 'piggy',
-        name: 'Penny the Piggy',
+        name: 'Piggy',
         description: 'Cheerful and loves to see your savings get fatter!',
         image: require('../assets/images/avatars/piggy.png'),
         dialogue: (ctx) => ({
@@ -101,7 +101,7 @@ export const AVATARS: GuideAvatar[] = [
     },
     {
         id: 'fox',
-        name: 'Felix the Fox',
+        name: 'Foxy',
         description: 'Clever, sharp, and knows all the tricks to keep your money safe.',
         image: require('../assets/images/avatars/fox.png'),
         dialogue: (ctx) => ({
@@ -128,7 +128,7 @@ export const AVATARS: GuideAvatar[] = [
     },
     {
         id: 'turtle',
-        name: 'Timothy Turtle',
+        name: 'Tim',
         description: 'Slow, steady, and knows that wealth is built over time.',
         image: require('../assets/images/avatars/turtle.png'),
         dialogue: (ctx) => ({

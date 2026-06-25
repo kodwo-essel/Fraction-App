@@ -334,11 +334,19 @@ export default function Configuration() {
                     </View>
                 </EntryTransition>
 
+                <EntryTransition delay={150}>
+                    <View style={styles.dividerContainer}>
+                        <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
+                        <Text variant="caption" color="textSecondary" style={styles.dividerText}>OR CREATE CUSTOM PLAN</Text>
+                        <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
+                    </View>
+                </EntryTransition>
+
                 {/* Section: Allocation Framework */}
                 <EntryTransition delay={200}>
                     <View style={styles.section}>
                         <View style={styles.sectionRow}>
-                            <Text variant="label" color="textSecondary">Categories</Text>
+                            <Text variant="label" color="textSecondary">Custom Plan</Text>
                             <View style={[styles.totalBadge, { backgroundColor: calculateTotal(null) > 100 ? theme.colors.error : calculateTotal(null) === 100 ? theme.colors.success : theme.colors.primary + '20' }]}>
                                 <Text variant="h3" style={{ color: calculateTotal(null) > 100 ? '#fff' : calculateTotal(null) === 100 ? '#fff' : theme.colors.primary }}>
                                     {calculateTotal(null)}%
@@ -599,6 +607,20 @@ const getStyles = (theme: any) => StyleSheet.create({
     sectionLabel: {
         marginBottom: theme.spacing.md,
         paddingHorizontal: theme.spacing.xs,
+    },
+    dividerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: theme.spacing.md,
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+    },
+    dividerText: {
+        marginHorizontal: theme.spacing.md,
+        fontFamily: theme.typography.fontFamily.bold,
+        letterSpacing: 1,
     },
     sectionRow: {
         flexDirection: 'row',
